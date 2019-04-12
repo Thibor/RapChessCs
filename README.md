@@ -5,7 +5,7 @@ C# chess engine
 
 You need download program Arena (http://www.playwitharena.com/?Download).
 
-Selest in menu Engines/Install New Engine and choose RapCsChess.exe;
+Selest in menu Engines/Install New Engine and choose RapCsChess.exe.
  
  ## Setup GUI Winboard
  
