@@ -546,7 +546,7 @@ namespace RapCsChess
 				while (n-- > 0)
 				{
 					if ((++g_totalNodes & 0x1fff) == 0)
-						g_stop = ((depthL > 1) && (((g_timeout > 0) && ((DateTime.Now - g_startTime).TotalMilliseconds > g_timeout)) || ((g_nodeout > 0) && (g_totalNodes > g_nodeout))));
+					g_stop = ((depthL > 1) && (((g_timeout > 0) && ((DateTime.Now - g_startTime).TotalMilliseconds > g_timeout)) || ((g_nodeout > 0) && (g_totalNodes > g_nodeout)))) || (g_stop = CReader.ReadLine() != "");
 					int cm = mu[n];
 					MakeMove(cm);
 					List<int> me = GenerateAllMoves(whiteTurn, depth == depthL);
@@ -645,7 +645,7 @@ namespace RapCsChess
 
 			while (true)
 			{
-				string msg = Console.ReadLine();
+				string msg = CReader.ReadLine();
 				Uci.SetMsg(msg);
 				switch (Uci.command)
 				{

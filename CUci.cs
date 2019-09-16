@@ -33,8 +33,16 @@ namespace RapCsChess
 
         public void SetMsg(string msg)
         {
-            tokens = msg.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
-            command = tokens[0];
+			if ((msg == null) || (msg == ""))
+			{
+				tokens = new string[0];
+				command = "";
+			}
+			else
+			{
+				tokens = msg.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+				command = tokens[0];
+			}
         }
     }
 }
