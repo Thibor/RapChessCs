@@ -1,4 +1,4 @@
-# RapCsChess
+# RapChessCs
 C# chess engine
 
 ## Setup GUI Arena
