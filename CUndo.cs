@@ -1,4 +1,4 @@
-﻿namespace RapCsChess
+﻿namespace RapChessCs
 {
     class CUndo
     {

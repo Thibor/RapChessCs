@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace RapCsChess
+namespace RapChessCs
 {
     class CUci
     {

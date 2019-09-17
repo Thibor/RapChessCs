@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace RapCsChess
+namespace RapChessCs
 {
 	class Program
 	{
@@ -546,7 +546,10 @@ namespace RapCsChess
 				while (n-- > 0)
 				{
 					if ((++g_totalNodes & 0x1fff) == 0)
-					g_stop = ((depthL > 1) && (((g_timeout > 0) && ((DateTime.Now - g_startTime).TotalMilliseconds > g_timeout)) || ((g_nodeout > 0) && (g_totalNodes > g_nodeout)))) || (g_stop = CReader.ReadLine() != "");
+					{
+						g_stop = ((depthL > 1) && (((g_timeout > 0) && ((DateTime.Now - g_startTime).TotalMilliseconds > g_timeout)) || ((g_nodeout > 0) && (g_totalNodes > g_nodeout)))) || (g_stop = CReader.ReadLine(false) != "");
+
+					}
 					int cm = mu[n];
 					MakeMove(cm);
 					List<int> me = GenerateAllMoves(whiteTurn, depth == depthL);
@@ -645,7 +648,7 @@ namespace RapCsChess
 
 			while (true)
 			{
-				string msg = CReader.ReadLine();
+				string msg = CReader.ReadLine(true);
 				Uci.SetMsg(msg);
 				switch (Uci.command)
 				{
@@ -687,7 +690,8 @@ namespace RapCsChess
 							}
 							for (int n = lo; n < hi; n++)
 							{
-								MakeMove(GetMoveFromString(Uci.tokens[n]));
+								string m = Uci.tokens[n];
+								MakeMove(GetMoveFromString(m));
 								if (g_move50 == 0)
 									undoIndex = 0;
 							}

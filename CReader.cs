@@ -4,19 +4,21 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 
-namespace RapCsChess
+namespace RapChessCs
 {
 	class CReader
 	{
 		private static Thread inputThread;
 		private static AutoResetEvent getInput;
+		private static AutoResetEvent gotInput;
 		private static string input;
-		private static bool newInput;
+		private static bool inputReady;
 
 		static CReader()
 		{
+			inputReady = false;
 			getInput = new AutoResetEvent(false);
-			newInput = false;
+			gotInput = new AutoResetEvent(false);
 			inputThread = new Thread(reader);
 			inputThread.IsBackground = true;
 			inputThread.Start();
@@ -27,22 +29,33 @@ namespace RapCsChess
 			while (true)
 			{
 				getInput.WaitOne();
-				input = Console.ReadLine();
-				newInput = true;
+				if (!inputReady)
+				{
+					input = Console.ReadLine();
+					inputReady = true;
+					gotInput.Set();
+				}
 			}
 		}
 
-		public static string ReadLine()
+		public static string ReadLine(bool wait)
 		{
-			if (newInput)
+			if (inputReady)
 			{
-				newInput = false;
+				inputReady = false;
 				return input;
 			}
 			else
 			{
 				getInput.Set();
-				return "";
+				if (wait)
+				{
+					gotInput.WaitOne();
+					inputReady = false;
+					return input;
+				}
+				else
+					return "";
 			}
 		}
 	}
