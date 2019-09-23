@@ -12,7 +12,7 @@ namespace RapChessCs
 		private static AutoResetEvent getInput;
 		private static AutoResetEvent gotInput;
 		private static string input;
-		private static bool inputReady;
+		public static bool inputReady;
 
 		static CReader()
 		{

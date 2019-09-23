@@ -3,6 +3,16 @@ using System.Collections.Generic;
 
 namespace RapChessCs
 {
+	class CUndo
+	{
+		public int captured;
+		public int hash;
+		public int passing;
+		public int castle;
+		public int move50;
+		public int lastCastle;
+	}
+
 	class Program
 	{
 		private static Random random = new Random();
@@ -158,11 +168,11 @@ namespace RapChessCs
 							pieceM++;
 							int del = wt ? -16 : 16;
 							int to = fr + del;
-							if ((g_board[to] & colorEmpty) > 0)
+							if (((g_board[to] & colorEmpty) > 0) && !attack)
 							{
-								GeneratePwnMoves(moves, fr, to, !attack, 0);
+								GeneratePwnMoves(moves, fr, to, true, 0);
 								if ((g_board[fr - del - del] == 0) && (g_board[to + del] & colorEmpty) > 0)
-									GeneratePwnMoves(moves, fr, to + del, !attack, 0);
+									GeneratePwnMoves(moves, fr, to + del, true, 0);
 							}
 							if ((g_board[to - 1] & enColor) > 0)
 								GeneratePwnMoves(moves, fr, to - 1, true, 0);
@@ -547,7 +557,7 @@ namespace RapChessCs
 				{
 					if ((++g_totalNodes & 0x1fff) == 0)
 					{
-						g_stop = ((depthL > 1) && (((g_timeout > 0) && ((DateTime.Now - g_startTime).TotalMilliseconds > g_timeout)) || ((g_nodeout > 0) && (g_totalNodes > g_nodeout)))) || (g_stop = CReader.ReadLine(false) != "");
+						g_stop = ((depthL > 1) && (((g_timeout > 0) && ((DateTime.Now - g_startTime).TotalMilliseconds > g_timeout)) || ((g_nodeout > 0) && (g_totalNodes > g_nodeout)))) || CReader.inputReady;
 
 					}
 					int cm = mu[n];
