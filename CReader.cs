@@ -29,12 +29,9 @@ namespace RapChessCs
 			while (true)
 			{
 				getInput.WaitOne();
-				if (!inputReady)
-				{
-					input = Console.ReadLine();
-					inputReady = true;
-					gotInput.Set();
-				}
+				input = Console.ReadLine();
+				inputReady = true;
+				gotInput.Set();
 			}
 		}
 
