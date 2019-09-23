@@ -11,7 +11,7 @@ namespace RapChessCs
 		private static Thread inputThread;
 		private static AutoResetEvent getInput;
 		private static AutoResetEvent gotInput;
-		private static string input;
+		public static string input;
 		public static bool inputReady;
 
 		static CReader()
@@ -29,21 +29,31 @@ namespace RapChessCs
 			while (true)
 			{
 				getInput.WaitOne();
-				input = Console.ReadLine();
-				inputReady = true;
-				gotInput.Set();
+				if (!inputReady)
+				{
+					input = Console.ReadLine();
+					inputReady = true;
+					gotInput.Set();
+				}
 			}
 		}
 
-		public static string ReadLine()
+		public static string ReadLine(bool wait, bool ready)
 		{
-			if (!inputReady)
+			if (inputReady)
 			{
-				getInput.Set();
-				gotInput.WaitOne();
+				inputReady = ready;
+				return input;
 			}
-			inputReady = false;
-			return input;
+			getInput.Set();
+			if (wait)
+			{
+				gotInput.WaitOne();
+				inputReady = ready;
+				return input;
+			}
+			else
+				return "";
 		}
 	}
 }

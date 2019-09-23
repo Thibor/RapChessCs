@@ -557,8 +557,7 @@ namespace RapChessCs
 				{
 					if ((++g_totalNodes & 0x1fff) == 0)
 					{
-						g_stop = ((depthL > 1) && (((g_timeout > 0) && ((DateTime.Now - g_startTime).TotalMilliseconds > g_timeout)) || ((g_nodeout > 0) && (g_totalNodes > g_nodeout)))) || CReader.inputReady;
-
+						g_stop = ((depthL > 1) && (((g_timeout > 0) && ((DateTime.Now - g_startTime).TotalMilliseconds > g_timeout)) || ((g_nodeout > 0) && (g_totalNodes > g_nodeout)))) || (CReader.ReadLine(false,true) == "stop");
 					}
 					int cm = mu[n];
 					MakeMove(cm);
@@ -626,7 +625,7 @@ namespace RapChessCs
 				bool myInsufficient = adjInsufficient;
 				int myMobility = adjMobility;
 				int m1 = mu.Count - 1;
-				int depthL = depth > 0 ? depth : 1;
+				int depthL = 1;
 				g_stop = false;
 				g_totalNodes = 0;
 				g_timeout = time;
@@ -658,7 +657,7 @@ namespace RapChessCs
 
 			while (true)
 			{
-				string msg = CReader.ReadLine(true);
+				string msg = CReader.ReadLine(true,false);
 				Uci.SetMsg(msg);
 				switch (Uci.command)
 				{
