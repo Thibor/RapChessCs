@@ -38,25 +38,15 @@ namespace RapChessCs
 			}
 		}
 
-		public static string ReadLine(bool wait)
+		public static string ReadLine()
 		{
-			if (inputReady)
-			{
-				inputReady = false;
-				return input;
-			}
-			else
+			if (!inputReady)
 			{
 				getInput.Set();
-				if (wait)
-				{
-					gotInput.WaitOne();
-					inputReady = false;
-					return input;
-				}
-				else
-					return "";
+				gotInput.WaitOne();
 			}
+			inputReady = false;
+			return input;
 		}
 	}
 }
