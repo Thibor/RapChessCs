@@ -63,47 +63,41 @@ namespace RapChessCs
 		private static Thread inputThread;
 		private static AutoResetEvent getInput;
 		private static AutoResetEvent gotInput;
-		public static string input;
-		public static bool inputReady;
+		public static string input = "";
 
 		static CReader()
 		{
-			inputReady = false;
 			getInput = new AutoResetEvent(false);
 			gotInput = new AutoResetEvent(false);
-			inputThread = new Thread(reader);
+			inputThread = new Thread(Reader);
 			inputThread.IsBackground = true;
 			inputThread.Start();
 		}
 
-		private static void reader()
+		private static void Reader()
 		{
 			while (true)
 			{
 				getInput.WaitOne();
+				input = "";
 				input = Console.ReadLine();
-				inputReady = true;
 				gotInput.Set();
 				getInput.Reset();
 			}
 		}
 
-		public static string ReadLine(bool wait, bool ready)
+		public static string ReadLine(bool wait)
 		{
-			if (inputReady)
-			{
-				inputReady = ready;
-				return input;
-			}
+			string s = input;
 			getInput.Set();
-			if (wait)
+			if (s == "")
 			{
-				gotInput.WaitOne();
-				inputReady = ready;
+				if (wait)
+					gotInput.WaitOne();
 				return input;
 			}
 			else
-				return "";
+				return s;
 		}
 	}
 
@@ -113,7 +107,7 @@ namespace RapChessCs
 
 		static void Main(string[] args)
 		{
-			string version = "2019-04-05";
+			string version = "2019-10-01";
 			const int piecePawn = 0x01;
 			const int pieceKnight = 0x02;
 			const int pieceBishop = 0x03;
@@ -651,7 +645,7 @@ namespace RapChessCs
 				{
 					if ((++g_totalNodes & 0x1fff) == 0)
 					{
-						g_stop = ((depthL > 1) && (((g_timeout > 0) && ((DateTime.Now - g_startTime).TotalMilliseconds > g_timeout)) || ((g_nodeout > 0) && (g_totalNodes > g_nodeout)))) || (CReader.ReadLine(false,false) == "stop");
+						g_stop = ((depthL > 1) && (((g_timeout > 0) && ((DateTime.Now - g_startTime).TotalMilliseconds > g_timeout)) || ((g_nodeout > 0) && (g_totalNodes > g_nodeout)))) || (CReader.ReadLine(false) == "stop");
 					}
 					int cm = mu[n];
 					MakeMove(cm);
@@ -751,10 +745,13 @@ namespace RapChessCs
 
 			while (true)
 			{
-				string msg = CReader.ReadLine(true,false);
+				string msg = CReader.ReadLine(true);
 				Uci.SetMsg(msg);
 				switch (Uci.command)
 				{
+					/*case "stop":
+						Console.WriteLine("getstop");
+						break;*/
 					case "uci":
 						Console.WriteLine("id name Rapcschess " + version);
 						Console.WriteLine("id author Thibor Raven");
