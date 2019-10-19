@@ -79,25 +79,25 @@ namespace RapChessCs
 			while (true)
 			{
 				getInput.WaitOne();
-				input = "";
-				input = Console.ReadLine();
-				gotInput.Set();
+				string s = Console.ReadLine();
+				input = s;
 				getInput.Reset();
+				gotInput.Set();
 			}
 		}
 
-		public static string ReadLine(bool wait)
+		public static string ReadLine(bool wait,bool clear)
 		{
-			string s = input;
-			getInput.Set();
-			if (s == "")
+			if (input == "")
 			{
+				getInput.Set();
 				if (wait)
-					gotInput.WaitOne();
-				return input;
+					gotInput.WaitOne();	
 			}
-			else
-				return s;
+			string s = input;
+			if (clear)
+				input = "";
+			return s;
 		}
 	}
 
@@ -645,7 +645,7 @@ namespace RapChessCs
 				{
 					if ((++g_totalNodes & 0x1fff) == 0)
 					{
-						g_stop = ((depthL > 1) && (((g_timeout > 0) && ((DateTime.Now - g_startTime).TotalMilliseconds > g_timeout)) || ((g_nodeout > 0) && (g_totalNodes > g_nodeout)))) || (CReader.ReadLine(false) == "stop");
+						g_stop = ((depthL > 1) && (((g_timeout > 0) && ((DateTime.Now - g_startTime).TotalMilliseconds > g_timeout)) || ((g_nodeout > 0) && (g_totalNodes > g_nodeout)))) || (CReader.ReadLine(false,false) == "stop");
 					}
 					int cm = mu[n];
 					MakeMove(cm);
@@ -730,7 +730,7 @@ namespace RapChessCs
 						mu[m1] = mu[bsIn];
 						mu[bsIn] = m;
 					}
-				} while (((depth == 0) || (depth > depthL)) && (g_depth <= bsDepth) && !g_stop && (m1 > 0));
+				} while (((depth == 0) || (depth > depthL)) && (bsDepth >= depthL - 1) && !g_stop && (m1 > 0));
 				double t = (DateTime.Now - g_startTime).TotalMilliseconds;
 				int nps = 0;
 				if (t > 0)
@@ -745,13 +745,10 @@ namespace RapChessCs
 
 			while (true)
 			{
-				string msg = CReader.ReadLine(true);
+				string msg = CReader.ReadLine(true,true);
 				Uci.SetMsg(msg);
 				switch (Uci.command)
 				{
-					/*case "stop":
-						Console.WriteLine("getstop");
-						break;*/
 					case "uci":
 						Console.WriteLine("id name Rapcschess " + version);
 						Console.WriteLine("id author Thibor Raven");
