@@ -3,5 +3,11 @@
 ################################################################################
 
 /.vs
-/bin
 /obj/Debug
+/obj/Release
+/bin/app.publish
+/bin/Release/app.publish
+/bin/RapChessCs.application
+/bin/RapChessCs.exe.config
+/bin/RapChessCs.exe.manifest
+/bin/RapChessCs.pdb
