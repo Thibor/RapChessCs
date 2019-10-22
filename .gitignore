@@ -2,6 +2,7 @@
 # Ten plik .gitignore został utworzony automatycznie przez Microsoft(R) Visual Studio.
 ################################################################################
 
+/.gitignore
 /.vs
 /obj/Debug
 /obj/Release
@@ -11,5 +12,4 @@
 /bin/RapChessCs.exe.config
 /bin/RapChessCs.exe.manifest
 /bin/RapChessCs.pdb
-.gitignore
 /RapChessCs.csproj.user
