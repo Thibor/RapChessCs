@@ -86,7 +86,7 @@ namespace RapChessCs
 			}
 		}
 
-		public static string ReadLine(bool wait, bool clear)
+		public static string ReadLine(bool wait)
 		{
 			getInput.Set();
 			if (wait)
@@ -641,7 +641,7 @@ namespace RapChessCs
 				{
 					if ((++g_totalNodes & 0x1fff) == 0)
 					{
-						g_stop = ((depthL > 1) && (((g_timeout > 0) && ((DateTime.Now - g_startTime).TotalMilliseconds > g_timeout)) || ((g_nodeout > 0) && (g_totalNodes > g_nodeout)))) || (CReader.ReadLine(false,false) == "stop");
+						g_stop = ((depthL > 1) && (((g_timeout > 0) && ((DateTime.Now - g_startTime).TotalMilliseconds > g_timeout)) || ((g_nodeout > 0) && (g_totalNodes > g_nodeout)))) || (CReader.ReadLine(false) == "stop");
 					}
 					int cm = mu[n];
 					MakeMove(cm);
@@ -741,7 +741,7 @@ namespace RapChessCs
 
 			while (true)
 			{
-				string msg = CReader.ReadLine(true,true);
+				string msg = CReader.ReadLine(true);
 				Uci.SetMsg(msg);
 				switch (Uci.command)
 				{
