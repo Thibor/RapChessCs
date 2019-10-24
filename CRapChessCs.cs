@@ -79,26 +79,22 @@ namespace RapChessCs
 			while (true)
 			{
 				getInput.WaitOne();
-				string s = Console.ReadLine();
-				input = s;
+				input = "";
+				input = Console.ReadLine();
 				getInput.Reset();
 				gotInput.Set();
 			}
 		}
 
-		public static string ReadLine(bool wait,bool clear)
+		public static string ReadLine(bool wait, bool clear)
 		{
-			if (input == "")
-			{
-				getInput.Set();
-				if (wait)
-					gotInput.WaitOne();	
-			}
-			string s = input;
-			if (clear)
-				input = "";
-			return s;
+			getInput.Set();
+			if (wait)
+				gotInput.WaitOne();
+			return input;
 		}
+
+
 	}
 
 	class CRapChessCs
@@ -730,7 +726,7 @@ namespace RapChessCs
 						mu[m1] = mu[bsIn];
 						mu[bsIn] = m;
 					}
-				} while (((depth == 0) || (depth > depthL)) && (bsDepth >= depthL - 1) && !g_stop && (m1 > 0));
+				} while (((depth == 0) || (depth > depthL - 1)) && (bsDepth >= depthL - 1) && !g_stop && (m1 > 0));
 				double t = (DateTime.Now - g_startTime).TotalMilliseconds;
 				int nps = 0;
 				if (t > 0)

@@ -13,3 +13,10 @@
 /bin/RapChessCs.exe.manifest
 /bin/RapChessCs.pdb
 /RapChessCs.csproj.user
+*.config
+*.pdb
+/Debug/RapChessCs.application
+*.manifest
+/Release/app.publish
+/Debug
+/Release/RapChessCs.application
