@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
 
 namespace RapChessCs
@@ -172,9 +173,9 @@ namespace RapChessCs
 			int[] arrDirBishop = { 15, -15, 17, -17 };
 			int[] arrDirRock = { 1, -1, 16, -16 };
 			int[] arrDirQueen = { 1, -1, 15, -15, 16, -16, 17, -17 };
-			DateTime g_startTime = new DateTime();
 			CUci Uci = new CUci();
 			CUndo[] undoStack = new CUndo[0xfff];
+			Stopwatch stopwatch = Stopwatch.StartNew();
 
 			int RAND_32()
 			{
@@ -601,7 +602,7 @@ namespace RapChessCs
 				else while (index-- > 0)
 					{
 						if ((++g_totalNodes & 0x1fff) == 0)
-							g_stop = (((g_timeout > 0) && ((DateTime.Now - g_startTime).TotalMilliseconds > g_timeout)) || ((g_nodeout > 0) && (g_totalNodes > g_nodeout)));
+							g_stop = (((g_timeout > 0) && (stopwatch.Elapsed.TotalMilliseconds > g_timeout)) || ((g_nodeout > 0) && (g_totalNodes > g_nodeout)));
 						int cm = mu[index];
 						MakeMove(cm);
 						List<int> me = GenerateAllMoves(whiteTurn, true);
@@ -637,11 +638,12 @@ namespace RapChessCs
 				int alphaDe = 0;
 				string alphaFm = "";
 				string alphaPv = "";
+
 				while (n-- > 0)
 				{
 					if ((++g_totalNodes & 0x1fff) == 0)
 					{
-						g_stop = ((depthL > 1) && (((g_timeout > 0) && ((DateTime.Now - g_startTime).TotalMilliseconds > g_timeout)) || ((g_nodeout > 0) && (g_totalNodes > g_nodeout)))) || (CReader.ReadLine(false) == "stop");
+						g_stop = ((depthL > 1) && (((g_timeout > 0) && (stopwatch.Elapsed.TotalMilliseconds > g_timeout)) || ((g_nodeout > 0) && (g_totalNodes > g_nodeout)))) || (CReader.ReadLine(false) == "stop");
 					}
 					int cm = mu[n];
 					MakeMove(cm);
@@ -680,7 +682,7 @@ namespace RapChessCs
 							bsFm = alphaFm;
 							bsPv = alphaPv;
 							bsDepth = alphaDe;
-							double t = (DateTime.Now - g_startTime).TotalMilliseconds;
+							double t = stopwatch.Elapsed.TotalMilliseconds;
 							int nps = 0;
 							if (t > 0)
 								nps = Convert.ToInt32((g_totalNodes / t) * 1000);
@@ -727,7 +729,7 @@ namespace RapChessCs
 						mu[bsIn] = m;
 					}
 				} while (((depth == 0) || (depth > depthL - 1)) && (bsDepth >= depthL - 1) && !g_stop && (m1 > 0));
-				double t = (DateTime.Now - g_startTime).TotalMilliseconds;
+				double t = stopwatch.Elapsed.TotalMilliseconds;
 				int nps = 0;
 				if (t > 0)
 					nps = Convert.ToInt32((g_totalNodes / t) * 1000);
@@ -791,7 +793,7 @@ namespace RapChessCs
 						}
 						break;
 					case "go":
-						g_startTime = DateTime.Now;
+						stopwatch.Restart();
 						int time = Uci.GetInt("movetime", 0);
 						int depth = Uci.GetInt("depth", 0);
 						int node = Uci.GetInt("nodes", 0);
@@ -804,6 +806,8 @@ namespace RapChessCs
 						}
 						Search(depth, time, node);
 						break;
+					case "quit":
+						return;
 				}
 
 			}
