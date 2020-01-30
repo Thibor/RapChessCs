@@ -13,6 +13,7 @@ namespace RapChessCs
 		public int castle;
 		public int move50;
 		public int lastCastle;
+		public int kingPos;
 	}
 
 	class CUci
@@ -102,7 +103,7 @@ namespace RapChessCs
 	{
 		private static Random random = new Random();
 
-		static void Main(string[] args)
+		static void Main()
 		{
 			string version = "2019-10-01";
 			const int piecePawn = 0x01;
@@ -133,17 +134,13 @@ namespace RapChessCs
 			int g_moveNumber = 0;
 			int g_phase = 32;
 			int g_totalNodes = 0;
-			bool g_inCheck = false;
 			int g_nodeout = 0;
 			int g_timeout = 0;
 			bool g_stop = false;
 			string g_pv = "";
 			string g_scoreFm = "";
-			int g_lastCastle = 0;
-			bool adjInsufficient = false;
-			int adjMobility = 0;
-			int g_countMove = 0;
 			int undoIndex = 0;
+			int kingPos = 0;
 			int[] arrField = new int[64];
 			int[] g_board = new int[256];
 			int[,] g_hashBoard = new int[256, 16];
@@ -157,8 +154,10 @@ namespace RapChessCs
 			int bsDepth = 0;
 			string bsFm = "";
 			string bsPv = "";
-			int[,] tmpMaterial = new int[7, 2] { { 0, 0 }, { 171, 240 }, { 764, 848 }, { 826, 891 }, { 1282, 1373 }, { 2526, 2646 }, { 0xffff, 0xffff } };
-			int[,] arrMaterial = new int[33, 7];
+			int[,] tmpPassed = new int[6, 2] { { 5, 7 }, { 5, 14 }, { 31, 38 }, { 73, 73 }, { 166, 166 }, { 252, 252 } };
+			int[,] tmpMaterial = new int[6, 2] { { 171, 240 }, { 764, 848 }, { 826, 891 }, { 1282, 1373 }, { 2526, 2646 }, { 0xffff, 0xffff } };
+			int[,] tmpCenter = new int[6, 2] { { 4, 2 }, { 8, 8 }, { 4, 8 }, { -8, 8 }, { -8, 0xf }, { -8, 8 } };
+			int[,] tmpPassedFile = new int[8, 2] { { 0, 0 }, { -11, -8 }, { -22, -16 }, { -33, -24 }, { -33, -24 }, { -22, -16 }, { -11, -8 }, { 0, 0 } };
 			int[,,] tmpMobility = new int[7, 28, 2] {
 			{ { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 } },
 			{ { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 } },
@@ -169,9 +168,10 @@ namespace RapChessCs
 			{ { 90,9 }, { 80,8 }, { 70, 7 }, { 60, 6 }, { 50, 5 }, { 40, 4 }, { 30, 3 }, { 20, 2 }, { 10, 1 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 } }
 			};
 			int[,,] arrMobility = new int[33, 7, 28];
+			int[,,] arrBonus = new int[33, 16, 0xff];
 			int[] arrDirKinght = { 14, -14, 18, -18, 31, -31, 33, -33 };
 			int[] arrDirBishop = { 15, -15, 17, -17 };
-			int[] arrDirRock = { 1, -1, 16, -16 };
+			int[] arrDirRook = { 1, -1, 16, -16 };
 			int[] arrDirQueen = { 1, -1, 15, -15, 16, -16, 17, -17 };
 			CUci Uci = new CUci();
 			CUndo[] undoStack = new CUndo[0xfff];
@@ -219,116 +219,296 @@ namespace RapChessCs
 				return false;
 			}
 
-			void GenerateMove(List<int> moves, int fr, int to, bool add, int flag)
+			bool IsAttacked(bool wt, int to)
 			{
-				g_countMove++;
-				if (((g_board[to] & 7) == pieceKing) || (((boardCheck[to] & g_lastCastle) == g_lastCastle) && ((g_lastCastle & maskCastle) > 0)))
-					g_inCheck = true;
-				else if (add)
-					moves.Add(fr | (to << 8) | flag);
+				int ec = wt ? colorBlack : colorWhite;
+				int del = wt ? -16 : 16;
+				int fr = to + del;
+				if ((g_board[fr + 1] & 0x1f) == (ec | piecePawn))
+					return true;
+				if ((g_board[fr - 1] & 0x1f) == (ec | piecePawn))
+					return true;
+				if ((g_board[to + 14] & 0x1f) == (ec | pieceKnight))
+					return true;
+				if ((g_board[to - 14] & 0x1f) == (ec | pieceKnight))
+					return true;
+				if ((g_board[to + 18] & 0x1f) == (ec | pieceKnight))
+					return true;
+				if ((g_board[to - 18] & 0x1f) == (ec | pieceKnight))
+					return true;
+				if ((g_board[to + 31] & 0x1f) == (ec | pieceKnight))
+					return true;
+				if ((g_board[to - 31] & 0x1f) == (ec | pieceKnight))
+					return true;
+				if ((g_board[to + 33] & 0x1f) == (ec | pieceKnight))
+					return true;
+				if ((g_board[to - 33] & 0x1f) == (ec | pieceKnight))
+					return true;
+				foreach (int d in arrDirBishop)
+				{
+					fr = to + d;
+					if ((g_board[fr] & 0x1f) == (ec | pieceKing))
+						return true;
+					while (g_board[fr] > 0)
+					{
+						if ((g_board[fr] & colorEmpty) > 0)
+						{
+							fr += d;
+							continue;
+						}
+						if ((g_board[fr] & 0x1f) == (ec | pieceBishop) || (g_board[fr] & 0x1f) == (ec | pieceQueen))
+							return true;
+						break;
+					}
+				}
+				foreach (int d in arrDirRook)
+				{
+					fr = to + d;
+					if ((g_board[fr] & 0x1f) == (ec | pieceKing))
+						return true;
+					while (g_board[fr] > 0)
+					{
+						if ((g_board[fr] & colorEmpty) > 0)
+						{
+							fr += d;
+							continue;
+						}
+						if ((g_board[fr] & 0x1f) == (ec | pieceRook) || (g_board[fr] & 0x1f) == (ec | pieceQueen))
+							return true;
+						break;
+					}
+				}
+				return false;
 			}
 
-			List<int> GenerateAllMoves(bool wt, bool attack)
+			void GenerateMove(List<int> moves, int fr, int to, int flag)
 			{
-				adjMobility = 0;
-				g_inCheck = false;
+				moves.Add(fr | (to << 8) | flag);
+			}
+
+			int Evaluate(bool wt)
+			{
+				int[] score = new int[2];
+				int[,] countPiece = new int[2, 3];
 				usColor = wt ? colorWhite : colorBlack;
 				enColor = wt ? colorBlack : colorWhite;
 				eeColor = enColor | colorEmpty;
-				int pieceM = 0;
-				int pieceN = 0;
-				int pieceB = 0;
+				for (int n = 0; n < 64; n++)
+				{
+					int fr = arrField[n];
+					int f = g_board[fr];
+					if ((f & colorEmpty) > 0)
+						continue;
+					int piece = f & 0xf;
+					int rank = f & 7;
+					int w = ((f & colorWhite) > 0) ? 1 : 0;
+					score[w] += arrBonus[g_phase, piece, fr];
+					int c = 0;
+					switch (rank)
+					{
+						case 1:
+							countPiece[w, 0]++;
+							break;
+						case 2:
+							countPiece[w, 1]++;
+							c = CountUniMoves(fr, arrDirKinght, 1);
+							score[w] += arrMobility[g_phase, rank, c];
+							break;
+						case 3:
+							countPiece[w, 2]++;
+							c = CountUniMoves(fr, arrDirBishop, 7);
+							score[w] += arrMobility[g_phase, rank, c];
+							break;
+						case 4:
+							countPiece[w, 0]++;
+							c = CountUniMoves(fr, arrDirRook, 7);
+							score[w] += arrMobility[g_phase, rank, c];
+							break;
+						case 5:
+							countPiece[w, 0]++;
+							c = CountUniMoves(fr, arrDirQueen, 7);
+							score[w] += arrMobility[g_phase, rank, c];
+							break;
+					}
+				}
+				bool ib = ((countPiece[0, 0] == 0) && (countPiece[0, 1] + (countPiece[0, 2] << 1) < 3));
+				bool iw = ((countPiece[1, 0] == 0) && (countPiece[1, 1] + (countPiece[1, 2] << 1) < 3));
+				if (ib && iw)
+					return 0;
+				if (countPiece[0, 2] > 1)
+					score[0] += 64;
+				if (countPiece[1, 2] > 1)
+					score[1] += 64;
+				return wt ? score[1] - score[0] : score[0] - score[1];
+			}
+
+
+			int GenerateAttackMoves(bool wt, out List<int> moves)
+			{
+				moves = new List<int>();
+				int[] score = new int[2];
+				int[,] countPiece = new int[2, 3];
+				usColor = wt ? colorWhite : colorBlack;
+				enColor = wt ? colorBlack : colorWhite;
+				eeColor = enColor | colorEmpty;
+				for (int n = 0; n < 64; n++)
+				{
+					int fr = arrField[n];
+					int f = g_board[fr];
+					if ((f & colorEmpty) > 0)
+						continue;
+					int piece = f & 0xf;
+					int rank = f & 7;
+					int w = ((f & colorWhite) > 0) ? 1 : 0;
+					score[w] += arrBonus[g_phase, piece, fr];
+					int c = 0;
+					switch (rank)
+					{
+						case 1:
+							countPiece[w, 0]++;
+							if ((f & usColor) > 0)
+							{
+								int del = wt ? -16 : 16;
+								int to = fr + del;
+								if ((g_board[to - 1] & enColor) > 0)
+									GeneratePwnMoves(moves, fr, to - 1, 0);
+								else if ((to - 1) == g_passing)
+									GeneratePwnMoves(moves, fr, g_passing, moveflagPassing);
+								if ((g_board[to + 1] & enColor) > 0)
+									GeneratePwnMoves(moves, fr, to + 1, 0);
+								else if ((to + 1) == g_passing)
+									GeneratePwnMoves(moves, fr, g_passing, moveflagPassing);
+							}
+							break;
+						case 2:
+							countPiece[w, 1]++;
+							if ((f & usColor) > 0)
+								c = GenerateUniMoves(moves, true, fr, arrDirKinght, 1);
+							else
+								c = CountUniMoves(fr, arrDirKinght, 1);
+							score[w] += arrMobility[g_phase, rank, c];
+							break;
+						case 3:
+							countPiece[w, 2]++;
+							if ((f & usColor) > 0)
+								c = GenerateUniMoves(moves, true, fr, arrDirBishop, 7);
+							else
+								c = CountUniMoves(fr, arrDirBishop, 7);
+							score[w] += arrMobility[g_phase, rank, c];
+							break;
+						case 4:
+							countPiece[w, 0]++;
+							if ((f & usColor) > 0)
+								c = GenerateUniMoves(moves, true, fr, arrDirRook, 7);
+							else
+								c = CountUniMoves(fr, arrDirRook, 7);
+							score[w] += arrMobility[g_phase, rank, c];
+							break;
+						case 5:
+							countPiece[w, 0]++;
+							if ((f & usColor) > 0)
+								c = GenerateUniMoves(moves, true, fr, arrDirQueen, 7);
+							else
+								c = CountUniMoves(fr, arrDirQueen, 7);
+							score[w] += arrMobility[g_phase, rank, c];
+							break;
+						case 6:
+							if ((f & usColor) > 0)
+								kingPos = fr;
+							break;
+					}
+				}
+				bool ib = ((countPiece[0, 0] == 0) && (countPiece[0, 1] + (countPiece[0, 2] << 1) < 3));
+				bool iw = ((countPiece[1, 0] == 0) && (countPiece[1, 1] + (countPiece[1, 2] << 1) < 3));
+				if (ib && iw)
+					return 0;
+				if (countPiece[0, 2] > 1)
+					score[0] += 64;
+				if (countPiece[1, 2] > 1)
+					score[1] += 64;
+				return wt ? score[1] - score[0] : score[0] - score[1];
+			}
+
+			List<int> GenerateAllMoves(bool wt)
+			{
+				usColor = wt ? colorWhite : colorBlack;
+				enColor = wt ? colorBlack : colorWhite;
+				eeColor = enColor | colorEmpty;
 				List<int> moves = new List<int>();
 				for (int n = 0; n < 64; n++)
 				{
 					int fr = arrField[n];
 					int f = g_board[fr];
-					if ((f & usColor) > 0) f &= 7;
-					else continue;
-					g_countMove = 0;
-					adjMobility += arrMaterial[g_phase, f];
+					if ((f & usColor) > 0)
+						f &= 7;
+					else
+						continue;
 					switch (f)
 					{
 						case 1:
-							pieceM++;
 							int del = wt ? -16 : 16;
 							int to = fr + del;
-							if (((g_board[to] & colorEmpty) > 0) && !attack)
+							if ((g_board[to] & colorEmpty) > 0)
 							{
-								GeneratePwnMoves(moves, fr, to, true, 0);
+								GeneratePwnMoves(moves, fr, to, 0);
 								if ((g_board[fr - del - del] == 0) && (g_board[to + del] & colorEmpty) > 0)
-									GeneratePwnMoves(moves, fr, to + del, true, 0);
+									GeneratePwnMoves(moves, fr, to + del, 0);
 							}
 							if ((g_board[to - 1] & enColor) > 0)
-								GeneratePwnMoves(moves, fr, to - 1, true, 0);
+								GeneratePwnMoves(moves, fr, to - 1, 0);
 							else if ((to - 1) == g_passing)
-								GeneratePwnMoves(moves, fr, g_passing, true, moveflagPassing);
-							else if ((g_board[to - 1] & colorEmpty) > 0)
-								GeneratePwnMoves(moves, fr, to - 1, false, 0);
+								GeneratePwnMoves(moves, fr, g_passing, moveflagPassing);
 							if ((g_board[to + 1] & enColor) > 0)
-								GeneratePwnMoves(moves, fr, to + 1, true, 0);
+								GeneratePwnMoves(moves, fr, to + 1, 0);
 							else if ((to + 1) == g_passing)
-								GeneratePwnMoves(moves, fr, g_passing, true, moveflagPassing);
-							else if ((g_board[to + 1] & colorEmpty) > 0)
-								GeneratePwnMoves(moves, fr, to + 1, false, 0);
+								GeneratePwnMoves(moves, fr, g_passing, moveflagPassing);
 							break;
 						case 2:
-							pieceN++;
-							GenerateUniMoves(moves, attack, fr, arrDirKinght, 1);
-							adjMobility += arrMobility[g_phase, f, g_countMove];
+							GenerateUniMoves(moves, false, fr, arrDirKinght, 1);
 							break;
 						case 3:
-							pieceB++;
-							GenerateUniMoves(moves, attack, fr, arrDirBishop, 7);
-							adjMobility += arrMobility[g_phase, f, g_countMove];
+							GenerateUniMoves(moves, false, fr, arrDirBishop, 7);
 							break;
 						case 4:
-							pieceM++;
-							GenerateUniMoves(moves, attack, fr, arrDirRock, 7);
-							adjMobility += arrMobility[g_phase, f, g_countMove];
+							GenerateUniMoves(moves, false, fr, arrDirRook, 7);
 							break;
 						case 5:
-							pieceM++;
-							GenerateUniMoves(moves, attack, fr, arrDirQueen, 7);
-							adjMobility += arrMobility[g_phase, f, g_countMove];
+							GenerateUniMoves(moves, false, fr, arrDirQueen, 7);
 							break;
 						case 6:
-							GenerateUniMoves(moves, attack, fr, arrDirQueen, 1);
+							kingPos = fr;
+							GenerateUniMoves(moves, false, fr, arrDirQueen, 1);
 							int cr = wt ? g_castleRights : g_castleRights >> 2;
 							if ((cr & 1) > 0)
-								if (((g_board[fr + 1] & colorEmpty) > 0) && ((g_board[fr + 2] & colorEmpty) > 0))
-									GenerateMove(moves, fr, fr + 2, true, moveflagCastleKing);
+								if (((g_board[fr + 1] & colorEmpty) > 0) && ((g_board[fr + 2] & colorEmpty) > 0) && !IsAttacked(wt, fr) && !IsAttacked(wt, fr + 1) && !IsAttacked(wt, fr + 2))
+									GenerateMove(moves, fr, fr + 2, moveflagCastleKing);
 							if ((cr & 2) > 0)
-								if (((g_board[fr - 1] & colorEmpty) > 0) && ((g_board[fr - 2] & colorEmpty) > 0) && ((g_board[fr - 3] & colorEmpty) > 0))
-									GenerateMove(moves, fr, fr - 2, true, moveflagCastleQueen);
-							adjMobility += arrMobility[g_phase, f, g_countMove];
+								if (((g_board[fr - 1] & colorEmpty) > 0) && ((g_board[fr - 2] & colorEmpty) > 0) && ((g_board[fr - 3] & colorEmpty) > 0) && !IsAttacked(wt, fr) && !IsAttacked(wt, fr - 1) && !IsAttacked(wt, fr - 2))
+									GenerateMove(moves, fr, fr - 2, moveflagCastleQueen);
 							break;
 					}
 				}
-				adjInsufficient = (pieceM == 0) && (pieceN + (pieceB << 1) < 3);
-				if ((pieceN | pieceB | pieceM) == 0)
-					adjMobility -= 64;
-				if (pieceB > 1)
-					adjMobility += 64;
 				return moves;
 			}
 
-			void GeneratePwnMoves(List<int> moves, int fr, int to, bool add, int flag)
+
+			void GeneratePwnMoves(List<int> moves, int fr, int to, int flag)
 			{
 				int y = to >> 4;
-				if (((y == 4) || (y == 11)) && add)
+				if ((y == 4) || (y == 11))
 				{
-					GenerateMove(moves, fr, to, add, moveflagPromoteQueen);
-					GenerateMove(moves, fr, to, add, moveflagPromoteRook);
-					GenerateMove(moves, fr, to, add, moveflagPromoteBishop);
-					GenerateMove(moves, fr, to, add, moveflagPromoteKnight);
+					GenerateMove(moves, fr, to, moveflagPromoteQueen);
+					GenerateMove(moves, fr, to, moveflagPromoteRook);
+					GenerateMove(moves, fr, to, moveflagPromoteBishop);
+					GenerateMove(moves, fr, to, moveflagPromoteKnight);
 				}
 				else
-					GenerateMove(moves, fr, to, add, flag);
+					GenerateMove(moves, fr, to, flag);
 			}
 
-			void GenerateUniMoves(List<int> moves, bool attack, int fr, int[] dir, int count)
+			int CountUniMoves(int fr, int[] dir, int count)
 			{
+				int result = 0;
 				for (int n = 0; n < dir.Length; n++)
 				{
 					int to = fr;
@@ -337,21 +517,51 @@ namespace RapChessCs
 					{
 						to += dir[n];
 						if ((g_board[to] & colorEmpty) > 0)
-							GenerateMove(moves, fr, to, !attack, 0);
+							result++;
 						else if ((g_board[to] & enColor) > 0)
 						{
-							GenerateMove(moves, fr, to, true, 0);
+							result++;
 							break;
 						}
 						else
 							break;
 					}
 				}
+				return result;
+			}
+
+			int GenerateUniMoves(List<int> moves, bool attack, int fr, int[] dir, int count)
+			{
+				int result = 0;
+				for (int n = 0; n < dir.Length; n++)
+				{
+					int to = fr;
+					int c = count;
+					while (c-- > 0)
+					{
+						to += dir[n];
+						if ((g_board[to] & colorEmpty) > 0)
+						{
+							result++;
+							if (!attack)
+								GenerateMove(moves, fr, to, 0);
+						}
+						else if ((g_board[to] & enColor) > 0)
+						{
+							result++;
+							GenerateMove(moves, fr, to, 0);
+							break;
+						}
+						else
+							break;
+					}
+				}
+				return result;
 			}
 
 			int GetMoveFromString(string moveString)
 			{
-				List<int> moves = GenerateAllMoves(whiteTurn, false);
+				List<int> moves = GenerateAllMoves(whiteTurn);
 				for (int i = 0; i < moves.Count; i++)
 				{
 					if (FormatMove(moves[i]) == moveString)
@@ -389,10 +599,40 @@ namespace RapChessCs
 				{
 					double f = ph / 32.0;
 					for (int p = 1; p < 7; p++)
-					{
-						arrMaterial[ph, p] = Convert.ToInt32(tmpMaterial[p, 0] * f + tmpMaterial[p, 1] * (1 - f));
 						for (int n = 0; n < 28; n++)
 							arrMobility[ph, p, n] = Convert.ToInt32(tmpMobility[p, n, 0] * f + tmpMobility[p, n, 1] * (1 - f));
+				}
+				for (int ph = 2; ph < 33; ph++)
+				{
+					double f = ph / 32.0;
+					for (int rank = 1; rank < 6; rank++)
+					{
+						for (int y = 0; y < 8; y++)
+							for (int x = 0; x < 8; x++)
+							{
+								int cx = Math.Min(x, 7 - x) + 1;
+								int cy = Math.Min(y, 7 - y) + 1;
+								int center = (cx * cy) - 1;
+								int a = tmpCenter[rank - 1, 0];
+								int b = tmpCenter[rank - 1, 1];
+								double v = (a * f + b * (1 - f)) * center;
+								a = tmpMaterial[rank - 1, 0];
+								b = tmpMaterial[rank - 1, 1];
+								v += a * f + b * (1 - f);
+								if (rank == 1 && y > 0 && y < 7)
+								{
+									int py = 6 - y;
+									a = tmpPassed[py, 0] + tmpPassedFile[x, 0];
+									b = tmpPassed[py, 1] + tmpPassedFile[x, 1];
+									v += a * f + b * (1 - f);
+								}
+								int nw = (y + 4) * 16 + (x + 4);
+								int nb = (11 - y) * 16 + (x + 4);
+								int iv = Convert.ToInt32(v);
+								arrBonus[ph, rank, nw] = iv;
+								arrBonus[ph, 8 | rank, nb] = iv;
+
+							}
 					}
 				}
 			}
@@ -416,10 +656,7 @@ namespace RapChessCs
 						col = 0;
 					}
 					else if (c >= '0' && c <= '9')
-					{
-						for (int j = 0; j < Int32.Parse(c.ToString()); j++)
-							col++;
-					}
+						col += Int32.Parse(c.ToString());
 					else
 					{
 						g_phase++;
@@ -480,9 +717,9 @@ namespace RapChessCs
 				int flags = move & 0xFF0000;
 				int piecefr = g_board[fr];
 				int piece = piecefr & 0xf;
+				int rank = piecefr & 7;
 				int capi = to;
 				g_captured = g_board[to];
-				g_lastCastle = (move & maskCastle) | (piecefr & maskColor);
 				if ((flags & moveflagCastleKing) > 0)
 				{
 					g_board[to - 1] = g_board[to + 1];
@@ -505,7 +742,7 @@ namespace RapChessCs
 				undo.passing = g_passing;
 				undo.castle = g_castleRights;
 				undo.move50 = g_move50;
-				undo.lastCastle = g_lastCastle;
+				undo.kingPos = kingPos;
 				g_hash ^= g_hashBoard[fr, piece];
 				g_passing = 0;
 				if ((g_captured & 0xF) > 0)
@@ -513,7 +750,7 @@ namespace RapChessCs
 					g_move50 = 0;
 					g_phase--;
 				}
-				else if ((piece & 7) == piecePawn)
+				else if (rank == piecePawn)
 				{
 					if (to == (fr + 32)) g_passing = (fr + 16);
 					if (to == (fr - 32)) g_passing = (fr - 16);
@@ -540,6 +777,8 @@ namespace RapChessCs
 					g_board[to] = g_board[fr];
 					g_hash ^= g_hashBoard[to, piece];
 				}
+				if (rank == pieceKing)
+					kingPos = to;
 				g_board[fr] = colorEmpty;
 				g_castleRights &= boardCastle[fr] & boardCastle[to];
 				whiteTurn ^= true;
@@ -557,8 +796,8 @@ namespace RapChessCs
 				g_passing = undo.passing;
 				g_castleRights = undo.castle;
 				g_move50 = undo.move50;
-				g_lastCastle = undo.lastCastle;
 				g_hash = undo.hash;
+				kingPos = undo.kingPos;
 				int captured = undo.captured;
 				if ((flags & moveflagCastleKing) > 0)
 				{
@@ -588,80 +827,83 @@ namespace RapChessCs
 				g_moveNumber--;
 			}
 
-			int Quiesce(List<int> mu, int depth, int depthL, int alpha, int beta, int score)
+			int Quiesce(int ply, int depth, int alpha, int beta)
 			{
-				int myMobility = adjMobility;
+				if (ply > depth)
+					return Evaluate(whiteTurn);
+				int score = GenerateAttackMoves(whiteTurn, out List<int> mu);
 				int alphaDe = 0;
-				int index = mu.Count;
 				string alphaFm = "";
 				string alphaPv = "";
-				if (alpha < score)
+				if (score >= beta)
+					return beta;
+				if (score > alpha)
 					alpha = score;
-				if (alpha >= beta)
-					alpha = score;
-				else while (index-- > 0)
+				int index = mu.Count;
+				while (index-- > 0)
+				{
+					if ((++g_totalNodes & 0x1fff) == 0)
+						g_stop = (((g_timeout > 0) && (stopwatch.Elapsed.TotalMilliseconds > g_timeout)) || ((g_nodeout > 0) && (g_totalNodes > g_nodeout)));
+					int cm = mu[index];
+					MakeMove(cm);
+					g_depth = 0;
+					g_pv = "";
+					if (IsAttacked(!whiteTurn, kingPos))
+						score = -0xffff;
+					else
+						score = -Quiesce(ply + 1, depth, -beta, -alpha);
+					UnmakeMove(cm);
+					if (g_stop) return -0xffff;
+					if (alpha < score)
 					{
-						if ((++g_totalNodes & 0x1fff) == 0)
-							g_stop = (((g_timeout > 0) && (stopwatch.Elapsed.TotalMilliseconds > g_timeout)) || ((g_nodeout > 0) && (g_totalNodes > g_nodeout)));
-						int cm = mu[index];
-						MakeMove(cm);
-						List<int> me = GenerateAllMoves(whiteTurn, true);
-						int osScore = myMobility - adjMobility;
-						g_depth = 0;
-						g_pv = "";
-						if (g_inCheck)
-							osScore = -0xffff;
-						else if (depth < depthL)
-							osScore = -Quiesce(me, depth + 1, depthL, -beta, -alpha, -osScore);
-						UnmakeMove(cm);
-						if (g_stop) return -0xffff;
-						if (alpha < osScore)
-						{
-							alpha = osScore;
-							alphaDe = g_depth + 1;
-							alphaFm = FormatMove(cm);
-							alphaPv = alphaFm + ' ' + g_pv;
-						}
-						if (alpha >= beta) break;
+						alpha = score;
+						alphaDe = g_depth + 1;
+						alphaFm = FormatMove(cm);
+						alphaPv = alphaFm + ' ' + g_pv;
+						if (score >= beta)
+							return beta;
 					}
+				}
 				g_depth = alphaDe;
 				g_pv = alphaPv;
 				return alpha;
 			}
 
-			int GetScore(List<int> mu, int depth, int depthL, int alpha, int beta)
+			int GetScore(List<int> mu, int ply, int depth, int alpha, int beta)
 			{
-				bool myInsufficient = adjInsufficient;
-				int myMobility = adjMobility;
 				int n = mu.Count;
 				int myMoves = n;
 				int alphaDe = 0;
 				string alphaFm = "";
 				string alphaPv = "";
-
+				int osScore = 0;
+				List<int> me = null;
 				while (n-- > 0)
 				{
 					if ((++g_totalNodes & 0x1fff) == 0)
 					{
-						g_stop = ((depthL > 1) && (((g_timeout > 0) && (stopwatch.Elapsed.TotalMilliseconds > g_timeout)) || ((g_nodeout > 0) && (g_totalNodes > g_nodeout)))) || (CReader.ReadLine(false) == "stop");
+						g_stop = ((depth > 1) && (((g_timeout > 0) && (stopwatch.Elapsed.TotalMilliseconds > g_timeout)) || ((g_nodeout > 0) && (g_totalNodes > g_nodeout)))) || (CReader.ReadLine(false) == "stop");
 					}
 					int cm = mu[n];
 					MakeMove(cm);
-					List<int> me = GenerateAllMoves(whiteTurn, depth == depthL);
 					g_depth = 0;
 					g_pv = "";
-					int osScore = myMobility - adjMobility;
-					if (g_inCheck)
-					{
+					osScore = -0xffff;
+					if (IsAttacked(!whiteTurn, kingPos))
 						myMoves--;
-						osScore = -0xffff;
-					}
-					else if ((g_move50 > 99) || IsRepetition() || ((myInsufficient || osScore < 0) && adjInsufficient))
+					else if ((g_move50 > 99) || IsRepetition())
 						osScore = 0;
-					else if (depth < depthL)
-						osScore = -GetScore(me, depth + 1, depthL, -beta, -alpha);
 					else
-						osScore = -Quiesce(me, 1, depthL, -beta, -alpha, -osScore);
+					{
+						if (ply < depth)
+						{
+							me = GenerateAllMoves(whiteTurn);
+							//int del = g_move50 == 0 ? 1 : 2;
+							osScore = -GetScore(me, ply + 1, depth, -beta, -alpha);
+						}
+						else
+							osScore = -Quiesce(1, depth, -beta, -alpha);
+					}
 					UnmakeMove(cm);
 					if (g_stop) return -0xffff;
 					if (alpha < osScore)
@@ -670,7 +912,7 @@ namespace RapChessCs
 						alphaFm = FormatMove(cm);
 						alphaPv = alphaFm + ' ' + g_pv;
 						alphaDe = g_depth + 1;
-						if (depth == 1)
+						if (ply == 1)
 						{
 							if (osScore > 0xf000)
 								g_scoreFm = "mate " + ((0xffff - osScore) >> 1);
@@ -686,20 +928,16 @@ namespace RapChessCs
 							int nps = 0;
 							if (t > 0)
 								nps = Convert.ToInt32((g_totalNodes / t) * 1000);
-							Console.WriteLine("info currmove " + bsFm + " currmovenumber " + n + " nodes " + g_totalNodes + " time " + t + " nps " + nps + " depth " + depthL + " seldepth " + alphaDe + " score " + g_scoreFm + " pv " + bsPv);
+							Console.WriteLine("info currmove " + bsFm + " currmovenumber " + n + " nodes " + g_totalNodes + " time " + t + " nps " + nps + " depth " + depth + " seldepth " + alphaDe + " score " + g_scoreFm + " pv " + bsPv);
 						}
 					}
 					if (alpha >= beta) break;
 				}
 				if (myMoves == 0)
-				{
-					GenerateAllMoves(whiteTurn ^ true, true);
-					if (!g_inCheck)
-					{
+					if (IsAttacked(whiteTurn, kingPos))
+						alpha = -0xffff + ply;
+					else
 						alpha = 0;
-					}
-					else alpha = -0xffff + depth;
-				}
 				g_depth = alphaDe;
 				g_pv = alphaPv;
 				return alpha;
@@ -707,28 +945,19 @@ namespace RapChessCs
 
 			void Search(int depth, int time, int nodes)
 			{
-				List<int> mu = GenerateAllMoves(whiteTurn, false);
-				bool myInsufficient = adjInsufficient;
-				int myMobility = adjMobility;
-				int m1 = mu.Count - 1;
-				int depthL = 1;
+				List<int> mu = GenerateAllMoves(whiteTurn);
+				int depthCur = 1;
 				g_stop = false;
 				g_totalNodes = 0;
 				g_timeout = time;
 				g_nodeout = nodes;
 				do
 				{
-					bsIn = m1;
-					adjInsufficient = myInsufficient;
-					adjMobility = myMobility;
-					GetScore(mu, 1, depthL++, -0xffff, 0xffff);
-					if (bsIn != m1)
-					{
-						int m = mu[m1];
-						mu[m1] = mu[bsIn];
-						mu[bsIn] = m;
-					}
-				} while (((depth == 0) || (depth > depthL - 1)) && (bsDepth >= depthL - 1) && !g_stop && (m1 > 0));
+					GetScore(mu, 1, depthCur++, -0xffff, 0xffff);
+					int m = mu[bsIn];
+					mu.Remove(bsIn);
+					mu.Add(m);
+				} while (((depth == 0) || (depth > depthCur - 1))/* && (bsDepth >= depthCur - 1)*/ && !g_stop && (mu.Count > 1));
 				double t = stopwatch.Elapsed.TotalMilliseconds;
 				int nps = 0;
 				if (t > 0)
