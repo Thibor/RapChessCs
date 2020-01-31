@@ -154,6 +154,8 @@ namespace RapChessCs
 			int bsDepth = 0;
 			string bsFm = "";
 			string bsPv = "";
+			bool lastInsufficient = false;
+			int lastScore = 0;
 			int[,] tmpPassed = new int[6, 2] { { 5, 7 }, { 5, 14 }, { 31, 38 }, { 73, 73 }, { 166, 166 }, { 252, 252 } };
 			int[,] tmpMaterial = new int[6, 2] { { 171, 240 }, { 764, 848 }, { 826, 891 }, { 1282, 1373 }, { 2526, 2646 }, { 0xffff, 0xffff } };
 			int[,] tmpCenter = new int[6, 2] { { 4, 2 }, { 8, 8 }, { 4, 8 }, { -8, 8 }, { -8, 0xf }, { -8, 8 } };
@@ -286,10 +288,12 @@ namespace RapChessCs
 				moves.Add(fr | (to << 8) | flag);
 			}
 
-			int Evaluate(bool wt)
+			int GetColorScore(bool wt)
 			{
-				int[] score = new int[2];
-				int[,] countPiece = new int[2, 3];
+				lastScore = 0;
+				int pieceM = 0;
+				int pieceN = 0;
+				int pieceB = 0;
 				usColor = wt ? colorWhite : colorBlack;
 				enColor = wt ? colorBlack : colorWhite;
 				eeColor = enColor | colorEmpty;
@@ -297,57 +301,52 @@ namespace RapChessCs
 				{
 					int fr = arrField[n];
 					int f = g_board[fr];
-					if ((f & colorEmpty) > 0)
+					if ((f & usColor)== 0)
 						continue;
 					int piece = f & 0xf;
 					int rank = f & 7;
-					int w = ((f & colorWhite) > 0) ? 1 : 0;
-					score[w] += arrBonus[g_phase, piece, fr];
+					lastScore += arrBonus[g_phase, piece, fr];
 					int c = 0;
 					switch (rank)
 					{
 						case 1:
-							countPiece[w, 0]++;
+							pieceM++;
 							break;
 						case 2:
-							countPiece[w, 1]++;
+							pieceN++;
 							c = CountUniMoves(fr, arrDirKinght, 1);
-							score[w] += arrMobility[g_phase, rank, c];
+							lastScore  += arrMobility[g_phase, rank, c];
 							break;
 						case 3:
-							countPiece[w, 2]++;
+							pieceB++;
 							c = CountUniMoves(fr, arrDirBishop, 7);
-							score[w] += arrMobility[g_phase, rank, c];
+							lastScore += arrMobility[g_phase, rank, c];
 							break;
 						case 4:
-							countPiece[w, 0]++;
+							pieceM++;
 							c = CountUniMoves(fr, arrDirRook, 7);
-							score[w] += arrMobility[g_phase, rank, c];
+							lastScore += arrMobility[g_phase, rank, c];
 							break;
 						case 5:
-							countPiece[w, 0]++;
+							pieceM++;
 							c = CountUniMoves(fr, arrDirQueen, 7);
-							score[w] += arrMobility[g_phase, rank, c];
+							lastScore += arrMobility[g_phase, rank, c];
 							break;
 					}
 				}
-				bool ib = ((countPiece[0, 0] == 0) && (countPiece[0, 1] + (countPiece[0, 2] << 1) < 3));
-				bool iw = ((countPiece[1, 0] == 0) && (countPiece[1, 1] + (countPiece[1, 2] << 1) < 3));
-				if (ib && iw)
-					return 0;
-				if (countPiece[0, 2] > 1)
-					score[0] += 64;
-				if (countPiece[1, 2] > 1)
-					score[1] += 64;
-				return wt ? score[1] - score[0] : score[0] - score[1];
+				if (pieceB > 1)
+					lastScore += 64;
+				lastInsufficient = ((pieceM == 0) && (pieceN + (pieceB << 1) < 3));
+				return lastScore;
 			}
-
 
 			int GenerateAttackMoves(bool wt, out List<int> moves)
 			{
 				moves = new List<int>();
-				int[] score = new int[2];
-				int[,] countPiece = new int[2, 3];
+				lastScore = 0;
+				int pieceM = 0;
+				int pieceN = 0;
+				int pieceB = 0;
 				usColor = wt ? colorWhite : colorBlack;
 				enColor = wt ? colorBlack : colorWhite;
 				eeColor = enColor | colorEmpty;
@@ -355,17 +354,16 @@ namespace RapChessCs
 				{
 					int fr = arrField[n];
 					int f = g_board[fr];
-					if ((f & colorEmpty) > 0)
+					if ((f & usColor) == 0)
 						continue;
 					int piece = f & 0xf;
 					int rank = f & 7;
-					int w = ((f & colorWhite) > 0) ? 1 : 0;
-					score[w] += arrBonus[g_phase, piece, fr];
+					lastScore += arrBonus[g_phase, piece, fr];
 					int c = 0;
 					switch (rank)
 					{
 						case 1:
-							countPiece[w, 0]++;
+							pieceM++;
 							if ((f & usColor) > 0)
 							{
 								int del = wt ? -16 : 16;
@@ -381,52 +379,35 @@ namespace RapChessCs
 							}
 							break;
 						case 2:
-							countPiece[w, 1]++;
-							if ((f & usColor) > 0)
-								c = GenerateUniMoves(moves, true, fr, arrDirKinght, 1);
-							else
-								c = CountUniMoves(fr, arrDirKinght, 1);
-							score[w] += arrMobility[g_phase, rank, c];
+							pieceN++;
+							c = GenerateUniMoves(moves, true, fr, arrDirKinght, 1);
+							lastScore += arrMobility[g_phase, rank, c];
 							break;
 						case 3:
-							countPiece[w, 2]++;
-							if ((f & usColor) > 0)
-								c = GenerateUniMoves(moves, true, fr, arrDirBishop, 7);
-							else
-								c = CountUniMoves(fr, arrDirBishop, 7);
-							score[w] += arrMobility[g_phase, rank, c];
+							pieceB++;
+							c = GenerateUniMoves(moves, true, fr, arrDirBishop, 7);
+							lastScore += arrMobility[g_phase, rank, c];
 							break;
 						case 4:
-							countPiece[w, 0]++;
-							if ((f & usColor) > 0)
-								c = GenerateUniMoves(moves, true, fr, arrDirRook, 7);
-							else
-								c = CountUniMoves(fr, arrDirRook, 7);
-							score[w] += arrMobility[g_phase, rank, c];
+							pieceM++;
+							c = GenerateUniMoves(moves, true, fr, arrDirRook, 7);
+							lastScore += arrMobility[g_phase, rank, c];
 							break;
 						case 5:
-							countPiece[w, 0]++;
-							if ((f & usColor) > 0)
-								c = GenerateUniMoves(moves, true, fr, arrDirQueen, 7);
-							else
-								c = CountUniMoves(fr, arrDirQueen, 7);
-							score[w] += arrMobility[g_phase, rank, c];
+							pieceM++;
+							c = GenerateUniMoves(moves, true, fr, arrDirQueen, 7);
+							lastScore += arrMobility[g_phase, rank, c];
 							break;
 						case 6:
-							if ((f & usColor) > 0)
-								kingPos = fr;
+							kingPos = fr;
+							GenerateUniMoves(moves, true, fr, arrDirQueen, 1);
 							break;
 					}
 				}
-				bool ib = ((countPiece[0, 0] == 0) && (countPiece[0, 1] + (countPiece[0, 2] << 1) < 3));
-				bool iw = ((countPiece[1, 0] == 0) && (countPiece[1, 1] + (countPiece[1, 2] << 1) < 3));
-				if (ib && iw)
-					return 0;
-				if (countPiece[0, 2] > 1)
-					score[0] += 64;
-				if (countPiece[1, 2] > 1)
-					score[1] += 64;
-				return wt ? score[1] - score[0] : score[0] - score[1];
+				if (pieceB > 1)
+					lastScore += 64;
+				lastInsufficient = ((pieceM == 0) && (pieceN + (pieceB << 1) < 3));
+				return lastScore;
 			}
 
 			List<int> GenerateAllMoves(bool wt)
@@ -605,7 +586,7 @@ namespace RapChessCs
 				for (int ph = 2; ph < 33; ph++)
 				{
 					double f = ph / 32.0;
-					for (int rank = 1; rank < 6; rank++)
+					for (int rank = 1; rank < 7; rank++)
 					{
 						for (int y = 0; y < 8; y++)
 							for (int x = 0; x < 8; x++)
@@ -827,11 +808,20 @@ namespace RapChessCs
 				g_moveNumber--;
 			}
 
-			int Quiesce(int ply, int depth, int alpha, int beta)
+			int Quiesce(int ply, int depth, int alpha, int beta, bool enInsufficient, int enScore)
 			{
 				if (ply > depth)
-					return Evaluate(whiteTurn);
-				int score = GenerateAttackMoves(whiteTurn, out List<int> mu);
+				{
+					GetColorScore(whiteTurn);
+					if (enInsufficient && lastInsufficient)
+						return 0;
+					return lastScore - enScore;
+				}
+				int score = GenerateAttackMoves(whiteTurn, out List<int> mu) - enScore;
+				bool usInsufficient = lastInsufficient;
+				int usScore = lastScore;
+				if (enInsufficient && usInsufficient)
+					return 0;
 				int alphaDe = 0;
 				string alphaFm = "";
 				string alphaPv = "";
@@ -851,7 +841,7 @@ namespace RapChessCs
 					if (IsAttacked(!whiteTurn, kingPos))
 						score = -0xffff;
 					else
-						score = -Quiesce(ply + 1, depth, -beta, -alpha);
+						score = -Quiesce(ply + 1, depth, -beta, -alpha,usInsufficient,usScore);
 					UnmakeMove(cm);
 					if (g_stop) return -0xffff;
 					if (alpha < score)
@@ -898,11 +888,13 @@ namespace RapChessCs
 						if (ply < depth)
 						{
 							me = GenerateAllMoves(whiteTurn);
-							//int del = g_move50 == 0 ? 1 : 2;
 							osScore = -GetScore(me, ply + 1, depth, -beta, -alpha);
 						}
 						else
-							osScore = -Quiesce(1, depth, -beta, -alpha);
+						{
+							GetColorScore(!whiteTurn);
+							osScore = -Quiesce(1, depth, -beta, -alpha,lastInsufficient,lastScore);
+						}
 					}
 					UnmakeMove(cm);
 					if (g_stop) return -0xffff;
