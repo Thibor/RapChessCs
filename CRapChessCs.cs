@@ -947,7 +947,7 @@ namespace RapChessCs
 				{
 					GetScore(mu, 1, depthCur++, -0xffff, 0xffff);
 					int m = mu[bsIn];
-					mu.Remove(bsIn);
+					mu.RemoveAt(bsIn);
 					mu.Add(m);
 				} while (((depth == 0) || (depth > depthCur - 1))/* && (bsDepth >= depthCur - 1)*/ && !g_stop && (mu.Count > 1));
 				double t = stopwatch.Elapsed.TotalMilliseconds;
