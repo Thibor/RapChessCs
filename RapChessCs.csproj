@@ -81,7 +81,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CBitBoard.cs" />
     <Compile Include="CRapChessCs.cs" />
+    <Compile Include="CReader.cs" />
+    <Compile Include="CUci.cs" />
+    <Compile Include="CUndo.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
