@@ -10,7 +10,7 @@ namespace RapChessCs
 	{
 		public static void Add(ref ulong board,int index)
 		{
-			board |= (ulong)(long)(1 << (63- index));
+			board |= (ulong)(ulong)(1 << (63- index));
 		}
 
 		public static void Del(ref ulong board,int index)

@@ -30,6 +30,7 @@ namespace RapChessCs
 			const int moveflagPromoteBishop = 0x40 << 16;
 			const int moveflagPromoteKnight = 0x80 << 16;
 			const int maskCastle = moveflagCastleKing | moveflagCastleQueen;
+			int optRandom = 0;
 			int g_castleRights = 0xf;
 			int g_depth = 0;
 			int g_hash = 0;
@@ -1027,9 +1028,18 @@ namespace RapChessCs
 					Console.WriteLine($"info depth {depthCur} nodes {g_totalNodes} time {t} nps {nps}");
 					depthCur++;
 				} while (((depth == 0) || (depth > depthCur - 1))/* && (bsDepth >= depthCur - 1)*/ && !g_stop && (mu.Count > 1));
-				string[] ponder = bsPv.Split(' ');
-				string pm = ponder.Length > 1 ? " ponder " + ponder[1] : "";
-				Console.WriteLine("bestmove " + bsFm + pm);
+				int r = random.Next(100);
+				if (optRandom > r)
+				{
+					bsFm = FormatMove(mu[1]);
+					Console.WriteLine($"bestmove {bsFm}");
+				}
+				else
+				{
+					string[] ponder = bsPv.Split(' ');
+					string pm = ponder.Length > 1 ? " ponder " + ponder[1] : "";
+					Console.WriteLine($"bestmove {bsFm}{pm}");
+				}
 			}
 
 			Initialize();
@@ -1043,6 +1053,7 @@ namespace RapChessCs
 					case "uci":
 						Console.WriteLine("id name Rapcschess " + version);
 						Console.WriteLine("id author Thibor Raven");
+						Console.WriteLine("option name random type spin default 0 min 0 max 100");
 						Console.WriteLine("uciok");
 						break;
 					case "isready":
@@ -1098,6 +1109,11 @@ namespace RapChessCs
 							time = Convert.ToInt32((ct / mg) + ci - 0xff);
 						}
 						Search(depth, time, node);
+						break;
+					case "setoption":
+						int i = Uci.GetIndex("random", 0);
+						if (i > 0)
+							optRandom = Convert.ToInt32(Uci.tokens[i]);
 						break;
 					case "quit":
 						return;
