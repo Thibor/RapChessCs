@@ -1051,7 +1051,7 @@ namespace RapChessCs
 				switch (Uci.command)
 				{
 					case "uci":
-						Console.WriteLine("id name Rapcschess " + version);
+						Console.WriteLine("id name RapChessCs " + version);
 						Console.WriteLine("id author Thibor Raven");
 						Console.WriteLine("option name random type spin default 0 min 0 max 100");
 						Console.WriteLine("uciok");
