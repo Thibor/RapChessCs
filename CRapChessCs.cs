@@ -651,6 +651,20 @@ namespace RapChessCs
 				return moves;
 			}
 
+			List<int> GenerateLegalMoves(bool wt)
+			{
+				List<int> moves = GenerateAllMoves(wt);
+				for (int n = moves.Count - 1; n >= 0; n--)
+				{
+					int cm = moves[n];
+					MakeMove(cm);
+					if (IsAttacked(!whiteTurn, kingPos))
+						moves.RemoveAt(n);
+					UnmakeMove(cm);
+				}
+				return moves;
+			}
+
 
 			void GeneratePwnMoves(List<int> moves, int fr, int to, int flag)
 			{
@@ -996,7 +1010,13 @@ namespace RapChessCs
 
 			void Search(int depth, int time, int nodes)
 			{
-				List<int> mu = GenerateAllMoves(whiteTurn);
+				List<int> mu = GenerateLegalMoves(whiteTurn);
+				if (mu.Count == 1)
+				{
+					bsFm = FormatMove(mu[0]);
+					Console.WriteLine($"bestmove {bsFm}");
+					return;
+				}
 				int depthCur = 1;
 				g_stop = false;
 				g_totalNodes = 0;
@@ -1027,11 +1047,13 @@ namespace RapChessCs
 						nps = Convert.ToInt32((g_totalNodes / t) * 1000);
 					Console.WriteLine($"info depth {depthCur} nodes {g_totalNodes} time {t} nps {nps}");
 					depthCur++;
-				} while (((depth == 0) || (depth > depthCur - 1))/* && (bsDepth >= depthCur - 1)*/ && !g_stop && (mu.Count > 1));
+				} while (((depth == 0) || (depth > depthCur - 1)) && (bsDepth >= depthCur - 1) && !g_stop);
 				int r = random.Next(100);
 				if (optRandom > r)
 				{
-					bsFm = FormatMove(mu[1]);
+					r = random.Next(mu.Count);
+					bsFm = FormatMove(mu[r]);
+					Console.WriteLine("info string book");
 					Console.WriteLine($"bestmove {bsFm}");
 				}
 				else
