@@ -11,7 +11,7 @@ namespace RapChessCs
 
 		static void Main()
 		{
-			string version = "2020-02-02";
+			string version = "2020-04-04";
 			const int piecePawn = 0x01;
 			const int pieceKnight = 0x02;
 			const int pieceBishop = 0x03;
@@ -1007,7 +1007,7 @@ namespace RapChessCs
 				return alpha;
 			}
 
-			void Search(int depth, int time, int nodes)
+			void Start(int depth, int time, int nodes)
 			{
 				List<int> mu = GenerateLegalMoves(whiteTurn);
 				if (mu.Count == 1)
@@ -1114,9 +1114,15 @@ namespace RapChessCs
 						{
 							double ct = whiteTurn ? Uci.GetInt("wtime", 0) : Uci.GetInt("btime", 0);
 							double mg = Uci.GetInt("movestogo", 32);
-							time = Convert.ToInt32(ct / (mg + 1));
+							time = Convert.ToInt32(ct / mg);
 						}
-						Search(depth, time, node);
+						if(time > 0)
+						{
+							time -= 0x20;
+							if (time < 1)
+								time = 1;
+						}
+						Start(depth, time, node);
 						break;
 					case "quit":
 						return;
