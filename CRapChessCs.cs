@@ -1063,6 +1063,7 @@ namespace RapChessCs
 					case "uci":
 						Console.WriteLine("id name RapChessCs " + version);
 						Console.WriteLine("id author Thibor Raven");
+						Console.WriteLine("id link https://github.com/Thibor/RapChessCs");
 						Console.WriteLine("uciok");
 						break;
 					case "isready":
@@ -1113,7 +1114,7 @@ namespace RapChessCs
 						if ((time == 0) && (depth == 0) && (node == 0))
 						{
 							double ct = whiteTurn ? Uci.GetInt("wtime", 0) : Uci.GetInt("btime", 0);
-							double mg = Uci.GetInt("movestogo", 32);
+							double mg = Uci.GetInt("movestogo", g_phase);
 							time = Convert.ToInt32(ct / mg);
 						}
 						if(time > 0)
