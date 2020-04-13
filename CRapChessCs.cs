@@ -983,16 +983,16 @@ namespace RapChessCs
 							else if (osScore < -0xf000)
 								g_scoreFm = "mate " + ((-0xfffe - osScore) >> 1);
 							else
-								g_scoreFm = "cp " + (osScore >> 2);
+								g_scoreFm = "cp " + (osScore >> 1);
 							bsIn = n;
 							bsFm = alphaFm;
 							bsPv = alphaPv;
 							bsDepth = alphaDe;
 							double t = stopwatch.Elapsed.TotalMilliseconds;
-							int nps = 0;
+							double nps = 0;
 							if (t > 0)
-								nps = Convert.ToInt32((g_totalNodes / t) * 1000);
-							Console.WriteLine("info currmove " + bsFm + " currmovenumber " + bsIn + " nodes " + g_totalNodes + " time " + t + " nps " + nps + " depth " + depth + " seldepth " + alphaDe + " score " + g_scoreFm + " pv " + bsPv);
+								nps = (g_totalNodes  /t)* 1000;
+							Console.WriteLine("info currmove " + bsFm + " currmovenumber " + bsIn + " nodes " + g_totalNodes + " time " + Convert.ToInt64(t) + " nps " + Convert.ToInt64(nps) + " depth " + depth + " seldepth " + alphaDe + " score " + g_scoreFm + " pv " + bsPv);
 						}
 					}
 					if (alpha >= beta) break;
@@ -1041,15 +1041,15 @@ namespace RapChessCs
 					mu.RemoveAt(bsIn);
 					mu.Add(m);
 					double t = stopwatch.Elapsed.TotalMilliseconds;
-					int nps = 0;
+					double nps = 0;
 					if (t > 0)
-						nps = Convert.ToInt32((g_totalNodes / t) * 1000);
-					Console.WriteLine($"info depth {depthCur} nodes {g_totalNodes} time {t} nps {nps}");
+						nps = (g_totalNodes/t) * 1000;
+					Console.WriteLine($"info depth {depthCur} nodes {g_totalNodes} time {Convert.ToInt64(t)} nps {Convert.ToInt64(nps)}");
 					depthCur++;
 				} while (((depth == 0) || (depth > depthCur - 1)) && (depthCur < 100) && !g_stop);
-					string[] ponder = bsPv.Split(' ');
-					string pm = ponder.Length > 1 ? $" ponder {ponder[1]}" : "";
-					Console.WriteLine($"bestmove {bsFm}{pm}");
+				string[] ponder = bsPv.Split(' ');
+				string pm = ponder.Length > 1 ? $" ponder {ponder[1]}" : "";
+				Console.WriteLine($"bestmove {bsFm}{pm}");
 			}
 
 			Initialize();
@@ -1113,15 +1113,23 @@ namespace RapChessCs
 						int node = Uci.GetInt("nodes", 0);
 						if ((time == 0) && (depth == 0) && (node == 0))
 						{
-							double ct = whiteTurn ? Uci.GetInt("wtime", 0) : Uci.GetInt("btime", 0);
-							double mg = Uci.GetInt("movestogo", g_phase);
-							time = Convert.ToInt32(ct / mg);
+							time = whiteTurn ? Uci.GetInt("wtime", 0) : Uci.GetInt("btime", 0);
+							if (time > 0)
+							{
+								double mg = Uci.GetInt("movestogo", g_phase << 1);
+								time = Convert.ToInt32(time / mg);
+								if (time < 1)
+									time = 1;
+							}
 						}
-						if(time > 0)
+						if (time > 0)
 						{
 							time -= 0x20;
-							if (time < 1)
-								time = 1;
+							if (time < 0x20)
+							{
+								time = 0;
+								depth = 1;
+							}
 						}
 						Start(depth, time, node);
 						break;
