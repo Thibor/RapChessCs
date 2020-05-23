@@ -38,8 +38,10 @@ namespace RapChessCs
 			int g_moveNumber = 0;
 			int g_phase = 32;
 			int g_totalNodes = 0;
-			int g_nodeout = 0;
 			int g_timeout = 0;
+			int g_depthout = 0;
+			int g_nodeout = 0;
+			int g_mainDepth = 1;
 			bool g_stop = false;
 			string g_pv = "";
 			string g_scoreFm = "";
@@ -879,6 +881,11 @@ namespace RapChessCs
 				g_moveNumber--;
 			}
 
+			bool GetStop()
+			{
+				return ((g_timeout > 0) && (stopwatch.Elapsed.TotalMilliseconds > g_timeout)) || ((g_depthout > 0) && (g_mainDepth > g_depthout)) || ((g_nodeout > 0) && (g_totalNodes > g_nodeout));
+			}
+
 			int Quiesce(int ply, int depth, int alpha, int beta, bool enInsufficient, int enScore)
 			{
 				int score = GenerateAttackMoves(whiteTurn, out List<int> mu) - enScore;
@@ -897,7 +904,7 @@ namespace RapChessCs
 				while (index-- > 0)
 				{
 					if ((++g_totalNodes & 0x1fff) == 0)
-						g_stop = (((g_timeout > 0) && (stopwatch.Elapsed.TotalMilliseconds > g_timeout)) || ((g_nodeout > 0) && (g_totalNodes > g_nodeout)));
+						g_stop = GetStop();
 					int cm = mu[index];
 					MakeMove(cm);
 					g_depth = 0;
@@ -943,9 +950,7 @@ namespace RapChessCs
 				while (n-- > 0)
 				{
 					if ((++g_totalNodes & 0x1fff) == 0)
-					{
-						g_stop = ((depth > 1) && (((g_timeout > 0) && (stopwatch.Elapsed.TotalMilliseconds > g_timeout)) || ((g_nodeout > 0) && (g_totalNodes > g_nodeout)))) || (CReader.ReadLine(false) == "stop");
-					}
+						g_stop = ((depth > 1) && (GetStop() || (CReader.ReadLine(false) == "stop")));
 					int cm = mu[n];
 					MakeMove(cm);
 					g_depth = 0;
@@ -991,7 +996,7 @@ namespace RapChessCs
 							double t = stopwatch.Elapsed.TotalMilliseconds;
 							double nps = 0;
 							if (t > 0)
-								nps = (g_totalNodes  /t)* 1000;
+								nps = (g_totalNodes / t) * 1000;
 							Console.WriteLine("info currmove " + bsFm + " currmovenumber " + bsIn + " nodes " + g_totalNodes + " time " + Convert.ToInt64(t) + " nps " + Convert.ToInt64(nps) + " depth " + depth + " seldepth " + alphaDe + " score " + g_scoreFm + " pv " + bsPv);
 						}
 					}
@@ -1016,16 +1021,17 @@ namespace RapChessCs
 					Console.WriteLine($"bestmove {bsFm}");
 					return;
 				}
-				int depthCur = 1;
 				g_stop = false;
 				g_totalNodes = 0;
 				g_timeout = time;
+				g_depthout = depth;
 				g_nodeout = nodes;
 				int alpha = -0xffff;
 				int beta = 0xffff;
+				g_mainDepth = 1;
 				do
 				{
-					int os = GetScore(mu, 1, depthCur, alpha, beta);
+					int os = GetScore(mu, 1, g_mainDepth, alpha, beta);
 					if ((os > alpha) && (os < beta))
 					{
 						alpha = os - 50;
@@ -1043,10 +1049,11 @@ namespace RapChessCs
 					double t = stopwatch.Elapsed.TotalMilliseconds;
 					double nps = 0;
 					if (t > 0)
-						nps = (g_totalNodes/t) * 1000;
-					Console.WriteLine($"info depth {depthCur} nodes {g_totalNodes} time {Convert.ToInt64(t)} nps {Convert.ToInt64(nps)}");
-					depthCur++;
-				} while (((depth == 0) || (depth > depthCur - 1)) && (depthCur < 100) && !g_stop);
+						nps = (g_totalNodes / t) * 1000;
+					Console.WriteLine($"info depth {g_mainDepth} nodes {g_totalNodes} time {Convert.ToInt64(t)} nps {Convert.ToInt64(nps)}");
+					if (++g_mainDepth > 100)
+						break;
+				} while (!GetStop() && !g_stop);
 				string[] ponder = bsPv.Split(' ');
 				string pm = ponder.Length > 1 ? $" ponder {ponder[1]}" : "";
 				Console.WriteLine($"bestmove {bsFm}{pm}");
@@ -1126,10 +1133,7 @@ namespace RapChessCs
 						{
 							time -= 0x20;
 							if (time < 0x20)
-							{
-								time = 0;
-								depth = 1;
-							}
+								time = 1;
 						}
 						Start(depth, time, node);
 						break;
