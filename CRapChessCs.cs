@@ -22,6 +22,7 @@ namespace RapChessCs
 					case "uci":
 						Console.WriteLine("id name Rapcschess " + version);
 						Console.WriteLine("id author Thibor Raven");
+						Console.WriteLine("id link https://github.com/Thibor/RapChessCs");
 						Console.WriteLine("uciok");
 						break;
 					case "isready":
