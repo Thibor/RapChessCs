@@ -9,7 +9,7 @@ namespace RapChessCs
 	{
 		static void Main()
 		{
-			string version = "2020-02-02";
+			string version = "2020-10-01";
 			CUci Uci = new CUci();
 			CChess Chess = new CChess();
 
@@ -69,13 +69,15 @@ namespace RapChessCs
 						Chess.stopwatch.Restart();
 						int time = Uci.GetInt("movetime", 0);
 						int depth = Uci.GetInt("depth", 0);
-						int node = Uci.GetInt("nodes", 0);
+						ulong node =(ulong) Uci.GetInt("nodes", 0);
 						if ((time == 0) && (depth == 0) && (node == 0))
 						{
 							double ct = Chess.whiteTurn ? Uci.GetInt("wtime", 0) : Uci.GetInt("btime", 0);
 							double ci = Chess.whiteTurn ? Uci.GetInt("winc", 0) : Uci.GetInt("binc", 0);
 							double mg = Uci.GetInt("movestogo", 32);
-							time = Convert.ToInt32((ct / mg) + ci - 0xff);
+							time = Convert.ToInt32((ct / mg) - 0xff);
+							if (time < 1)
+								time = 1;
 						}
 						Chess.StartThread(depth, time, node);
 						break;

@@ -25,20 +25,21 @@ namespace RapChessCs
 		const int moveflagPromoteBishop = 0x40 << 16;
 		const int moveflagPromoteKnight = 0x80 << 16;
 		const int maskCastle = moveflagCastleKing | moveflagCastleQueen;
+		const int maskPromotion = moveflagPromoteQueen | moveflagPromoteRook | moveflagPromoteBishop | moveflagPromoteKnight;
 		int inTime = 0;
 		int inDepth = 0;
-		int inNodes = 0;
+		ulong inNodes = 0;
 		int g_castleRights = 0xf;
 		int g_depth = 0;
-		int g_hash = 0;
+		ulong g_hash = 0;
 		int g_passing = 0;
 		public int g_move50 = 0;
 		int g_moveNumber = 0;
 		int g_phase = 32;
-		int g_totalNodes = 0;
+		ulong g_totalNodes = 0;
 		int g_timeout = 0;
 		int g_depthout = 0;
-		int g_nodeout = 0;
+		ulong g_nodeout = 0;
 		int g_mainDepth = 1;
 		bool g_stop = false;
 		string g_pv = "";
@@ -48,7 +49,7 @@ namespace RapChessCs
 		readonly int[] arrFieldL = new int[64];
 		readonly int[] arrFieldS = new int[256];
 		readonly int[] g_board = new int[256];
-		readonly int[,] g_hashBoard = new int[256, 16];
+		readonly ulong[,] g_hashBoard = new ulong[256, 16];
 		readonly int[] boardCheck = new int[256];
 		readonly int[] boardCastle = new int[256];
 		public bool whiteTurn = true;
@@ -259,11 +260,9 @@ namespace RapChessCs
 				else
 				{
 					g_phase++;
-					char b = Char.ToLower(c);
-					bool isWhite = b != c;
-					int piece = isWhite ? colorWhite : colorBlack;
+					int piece = Char.IsUpper(c) ? colorWhite : colorBlack;
 					int index = (y + 4) * 16 + x + 4;
-					switch (b)
+					switch (Char.ToLower(c))
 					{
 						case 'p':
 							piece |= piecePawn;
@@ -311,9 +310,9 @@ namespace RapChessCs
 			undoIndex = 0;
 		}
 
-		int RAND_32()
+		ulong RAND_32()
 		{
-			return random.Next();
+			return ((ulong)random.Next() << 32) | ((ulong)random.Next() << 0);
 		}
 
 		string FormatMove(int move)
@@ -345,7 +344,7 @@ namespace RapChessCs
 
 		bool IsRepetition()
 		{
-			for (int n = undoIndex - 4; n >= undoIndex - g_move50; n -= 2)
+			for (int n = undoIndex - 2; n >= undoIndex - g_move50; n -= 2)
 				if (undoStack[n].hash == g_hash)
 				{
 					return true;
@@ -417,7 +416,7 @@ namespace RapChessCs
 
 		void GenerateMove(List<int> moves, int fr, int to, int flag)
 		{
-			if (((g_board[to] & 7) > 0) || ((flag & moveflagPassing) > 0))
+			if (((g_board[to] & 7) > 0) || ((flag & moveflagPassing) > 0) || ((flag & maskPromotion) > 0))
 				moves.Add(fr | (to << 8) | flag);
 			else
 				moves.Insert(0, fr | (to << 8) | flag);
@@ -737,15 +736,22 @@ namespace RapChessCs
 			int piece = piecefr & 0xf;
 			int rank = piecefr & 7;
 			int captured = g_board[to];
+			CBitBoard.Del(ref bitBoard[piece], arrFieldS[fr]);
 			if ((flags & moveflagCastleKing) > 0)
 			{
 				g_board[to - 1] = g_board[to + 1];
 				g_board[to + 1] = colorEmpty;
+				int secPiece = (piece & colorWhite) | pieceRook;
+				CBitBoard.Del(ref bitBoard[secPiece], arrFieldS[to + 1]);
+				CBitBoard.Add(ref bitBoard[secPiece], arrFieldS[to - 1]);
 			}
 			else if ((flags & moveflagCastleQueen) > 0)
 			{
 				g_board[to + 1] = g_board[to - 2];
 				g_board[to - 2] = colorEmpty;
+				int secPiece = (piece & colorWhite) | pieceRook;
+				CBitBoard.Del(ref bitBoard[secPiece], arrFieldS[to - 2]);
+				CBitBoard.Add(ref bitBoard[secPiece], arrFieldS[to + 1]);
 			}
 			else if ((flags & moveflagPassing) > 0)
 			{
@@ -754,7 +760,7 @@ namespace RapChessCs
 				g_board[capi] = colorEmpty;
 				CBitBoard.Del(ref bitBoard[(enColor | piecePawn) & 0xf], arrFieldS[capi]);
 			}
-			CUndo undo = undoStack[undoIndex++];
+			ref CUndo undo = ref undoStack[undoIndex++];
 			undo.captured = captured;
 			undo.hash = g_hash;
 			undo.passing = g_passing;
@@ -763,12 +769,11 @@ namespace RapChessCs
 			undo.kingPos = kingPos;
 			g_hash ^= g_hashBoard[fr, piece];
 			g_passing = 0;
-			int pieceCaptured = captured & 0xF;
-			if (pieceCaptured > 0)
+			if (captured != colorEmpty)
 			{
 				g_move50 = 0;
 				g_phase--;
-				CBitBoard.Del(ref bitBoard[pieceCaptured], arrFieldS[to]);
+				CBitBoard.Del(ref bitBoard[captured & 0xf], arrFieldS[to]);
 			}
 			else if (rank == piecePawn)
 			{
@@ -790,9 +795,8 @@ namespace RapChessCs
 				else
 					newPiece |= pieceRook;
 				g_board[to] = newPiece;
-				CBitBoard.Del(ref bitBoard[piece], arrFieldS[to]);
 				CBitBoard.Add(ref bitBoard[newPiece & 0xf], arrFieldS[to]);
-				g_hash ^= g_hashBoard[to, newPiece & 7];
+				g_hash ^= g_hashBoard[to, newPiece & 0xf];
 			}
 			else
 			{
@@ -803,7 +807,6 @@ namespace RapChessCs
 			if (rank == pieceKing)
 				kingPos = to;
 			g_board[fr] = colorEmpty;
-			CBitBoard.Del(ref bitBoard[piece], arrFieldS[fr]);
 			g_castleRights &= boardCastle[fr] & boardCastle[to];
 			whiteTurn ^= true;
 			g_moveNumber++;
@@ -823,28 +826,32 @@ namespace RapChessCs
 			g_hash = undo.hash;
 			kingPos = undo.kingPos;
 			int captured = undo.captured;
-			int pieceCaptured = captured & 0xf;
+			CBitBoard.Del(ref bitBoard[piece & 0xf], arrFieldS[to]);
 			if ((flags & moveflagCastleKing) > 0)
 			{
 				g_board[to + 1] = g_board[to - 1];
 				g_board[to - 1] = colorEmpty;
+				int secPiece = (piece & 0x8) | pieceRook;
+				CBitBoard.Del(ref bitBoard[secPiece], arrFieldS[to - 1]);
+				CBitBoard.Add(ref bitBoard[secPiece], arrFieldS[to + 1]);
 			}
 			else if ((flags & moveflagCastleQueen) > 0)
 			{
 				g_board[to - 2] = g_board[to + 1];
 				g_board[to + 1] = colorEmpty;
+				int secPiece = (piece & 0x8) | pieceRook;
+				CBitBoard.Del(ref bitBoard[secPiece], arrFieldS[to + 1]);
+				CBitBoard.Add(ref bitBoard[secPiece], arrFieldS[to - 2]);
 			}
 			if ((flags & moveflagPromotion) > 0)
 			{
-				int newPiece = (piece & (~0x7)) | piecePawn;
-				g_board[fr] = newPiece;
-				CBitBoard.Del(ref bitBoard[piece & 0xf], arrFieldS[fr]);
-				CBitBoard.Add(ref bitBoard[newPiece & 0xf], arrFieldS[fr]);
+				int secPiece = (piece & (~0x7)) | piecePawn;
+				g_board[fr] = secPiece;
+				CBitBoard.Add(ref bitBoard[secPiece & 0xf], arrFieldS[fr]);
 			}
 			else
 			{
 				g_board[fr] = g_board[to];
-				CBitBoard.Del(ref bitBoard[piece & 0xf], arrFieldS[to]);
 				CBitBoard.Add(ref bitBoard[piece & 0xf], arrFieldS[fr]);
 			}
 			if ((flags & moveflagPassing) > 0)
@@ -854,10 +861,10 @@ namespace RapChessCs
 				CBitBoard.Del(ref bitBoard[piece & 0xf], arrFieldS[to]);
 			}
 			g_board[capi] = captured;
-			if (pieceCaptured > 0)
+			if (captured != colorEmpty)
 			{
 				g_phase++;
-				CBitBoard.Add(ref bitBoard[pieceCaptured], arrFieldS[capi]);
+				CBitBoard.Add(ref bitBoard[captured & 0xf], arrFieldS[capi]);
 			}
 			whiteTurn ^= true;
 			g_moveNumber--;
@@ -969,10 +976,10 @@ namespace RapChessCs
 						bsFm = alphaFm;
 						bsPv = alphaPv;
 						bsDepth = alphaDe;
-						double t = stopwatch.Elapsed.TotalMilliseconds;
-						int nps = 0;
+						long t = Convert.ToInt64(stopwatch.Elapsed.TotalMilliseconds);
+						long nps = 0;
 						if (t > 0)
-							nps = Convert.ToInt32((g_totalNodes / t) * 1000);
+							nps = Convert.ToInt64(((double)g_totalNodes / t) * 1000);
 						Console.WriteLine("info currmove " + bsFm + " currmovenumber " + bsIn + " nodes " + g_totalNodes + " time " + t + " nps " + nps + " depth " + depth + " seldepth " + alphaDe + " score " + g_scoreFm + " pv " + bsPv);
 					}
 				}
@@ -988,7 +995,7 @@ namespace RapChessCs
 			return alpha;
 		}
 
-		void Start(int depth, int time, int nodes)
+		void Start(int depth, int time, ulong nodes)
 		{
 			List<int> mu = GenerateAllMoves(whiteTurn);
 			if (mu.Count == 0)
@@ -1023,10 +1030,10 @@ namespace RapChessCs
 				int m = mu[bsIn];
 				mu.RemoveAt(bsIn);
 				mu.Add(m);
-				double t = stopwatch.Elapsed.TotalMilliseconds;
-				int nps = 0;
+				ulong t = Convert.ToUInt64(stopwatch.Elapsed.TotalMilliseconds);
+				ulong nps = 0;
 				if (t > 0)
-					nps = Convert.ToInt32((g_totalNodes / t) * 1000);
+					nps = Convert.ToUInt64((g_totalNodes / t) * 1000);
 				Console.WriteLine($"info depth {g_mainDepth} nodes {g_totalNodes} time {t} nps {nps}");
 				if (++g_mainDepth > depthLimit)
 					break;
@@ -1046,7 +1053,7 @@ namespace RapChessCs
 			Start(inDepth, inTime, inNodes);
 		}
 
-		public void StartThread(int depth, int time, int nodes)
+		public void StartThread(int depth, int time, ulong nodes)
 		{
 			inDepth = depth;
 			inTime = time;
