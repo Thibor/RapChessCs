@@ -1,8 +1,8 @@
-﻿namespace RapChessCs
+﻿namespace Namespce
 {
 	class CSynStop
 	{
-		private bool value;
+		private bool value = true;
 		private readonly object locker = new object();
 
 		public bool GetStop()

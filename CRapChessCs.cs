@@ -3,13 +3,13 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 
-namespace RapChessCs
+namespace Namespce
 {
-	class CRapChessCs
+	class assembly
 	{
 		static void Main()
 		{
-			string version = "2020-10-01";
+			string version = "2020-12-01";
 			CUci Uci = new CUci();
 			CChess Chess = new CChess();
 
@@ -20,7 +20,7 @@ namespace RapChessCs
 				switch (Uci.command)
 				{
 					case "uci":
-						Console.WriteLine("id name Rapcschess " + version);
+						Console.WriteLine($"id name Rapcschess {version}");
 						Console.WriteLine("id author Thibor Raven");
 						Console.WriteLine("id link https://github.com/Thibor/RapChessCs");
 						Console.WriteLine("uciok");
@@ -35,31 +35,25 @@ namespace RapChessCs
 						if (lo > 0)
 						{
 							if (lo > hi)
-							{
 								hi = Uci.tokens.Length;
-							}
 							for (int n = lo; n < hi; n++)
 							{
 								if (n > lo)
-								{
 									fen += ' ';
-								}
 								fen += Uci.tokens[n];
 							}
 						}
-						Chess.InitializeFromFen(fen);
+						Chess.SetFen(fen);
 						lo = Uci.GetIndex("moves", 0);
 						hi = Uci.GetIndex("fen", Uci.tokens.Length);
 						if (lo > 0)
 						{
 							if (lo > hi)
-							{
 								hi = Uci.tokens.Length;
-							}
 							for (int n = lo; n < hi; n++)
 							{
 								string m = Uci.tokens[n];
-								Chess.MakeMove(Chess.GetMoveFromString(m));
+								Chess.MakeMove(Chess.UmoToEmo(m));
 								if (Chess.g_move50 == 0)
 									Chess.undoIndex = 0;
 							}
@@ -69,13 +63,12 @@ namespace RapChessCs
 						Chess.stopwatch.Restart();
 						int time = Uci.GetInt("movetime", 0);
 						int depth = Uci.GetInt("depth", 0);
-						ulong node =(ulong) Uci.GetInt("nodes", 0);
+						int node = Uci.GetInt("nodes", 0);
 						if ((time == 0) && (depth == 0) && (node == 0))
 						{
 							double ct = Chess.whiteTurn ? Uci.GetInt("wtime", 0) : Uci.GetInt("btime", 0);
-							double ci = Chess.whiteTurn ? Uci.GetInt("winc", 0) : Uci.GetInt("binc", 0);
-							double mg = Uci.GetInt("movestogo", 32);
-							time = Convert.ToInt32((ct / mg) - 0xff);
+							double mg = Uci.GetInt("movestogo", 0x40);
+							time = Convert.ToInt32(ct / mg);
 							if (time < 1)
 								time = 1;
 						}
