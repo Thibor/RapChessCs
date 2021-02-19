@@ -47,8 +47,6 @@ namespace Namespce
 		ulong[,] g_hashBoard = new ulong[256, 16];
 		int[] boardCastle = new int[256];
 		public bool whiteTurn = true;
-		//int usColor = 0;
-		//int enColor = 0;
 		string bsFm = "";
 		string bsPv = "";
 		ulong[] bitBoard = new ulong[16];
@@ -135,7 +133,6 @@ namespace Namespce
 			}
 			for (int ph = 2; ph < 33; ph++)
 			{
-				double f = ph / 32.0;
 				arrIsolated[ph] = GetPhaseValue(ph, tmpIsolated[0], tmpIsolated[1]);
 				arrDoubled[ph] = GetPhaseValue(ph, tmpDoubled[0], tmpDoubled[1]);
 				arrBackward[ph] = GetPhaseValue(ph, tmpBackward[0], tmpBackward[1]);
@@ -146,29 +143,9 @@ namespace Namespce
 				{
 					int a = arrRankCon[rank];
 					int b = (arrRankCon[rank] * (rank - 2)) / 4;
-					double v = a * f + b * (1 - f);
-					bonConnected[ph, rank, 0] = Convert.ToInt32(v);
-					bonConnected[ph, 7 - rank, 1] = Convert.ToInt32(v);
-					for (int y = 0; y < 8; y++)
-						for (int x = 0; x < 8; x++)
-						{
-							int nw = (y + 4) * 16 + (x + 4);
-							int nb = (11 - y) * 16 + (x + 4);
-							int cx = Math.Min(x, 7 - x) + 1;
-							int cy = Math.Min(y, 7 - y) + 1;
-							int center = (cx * cy) - 1;
-							a = tmpCenter[rank - 1, 0] * center;
-							b = tmpCenter[rank - 1, 1] * center;
-							a += tmpMaterial[rank - 1, 0];
-							b += tmpMaterial[rank - 1, 1];
-							if ((rank == 3) && ((x == y) || (x == (7 - y))))
-							{
-								a += 16;
-								b += 16;
-							}
-							bonPosition[ph, 8 | rank, nw] = GetPhaseValue(ph, a, b);
-							bonPosition[ph, rank, nb] = GetPhaseValue(ph, a, b);
-						}
+					int v = GetPhaseValue(ph,a,b);
+					bonConnected[ph, rank, 0] = v;
+					bonConnected[ph, 7 - rank, 1] = v;
 				}
 
 			}
@@ -269,6 +246,36 @@ namespace Namespce
 					CBitBoard.Add(ref arrAttack[pieceKing, iw], x, y + 1);
 
 				}
+			FillBonPosition();
+		}
+
+		public void FillBonPosition(int level = 100)
+		{
+			for (int ph = 2; ph < 33; ph++)
+				for (int rank = 1; rank < 7; rank++)
+					for (int y = 0; y < 8; y++)
+						for (int x = 0; x < 8; x++)
+						{
+							int nw = (y + 4) * 16 + (x + 4);
+							int nb = (11 - y) * 16 + (x + 4);
+							int cx = Math.Min(x, 7 - x) + 1;
+							int cy = Math.Min(y, 7 - y) + 1;
+							int center = (cx * cy) - 1;
+							int a = tmpCenter[rank - 1, 0] * center;
+							int b = tmpCenter[rank - 1, 1] * center;
+							a += tmpMaterial[rank - 1, 0];
+							b += tmpMaterial[rank - 1, 1];
+							if ((rank == 3) && ((x == y) || (x == (7 - y))))
+							{
+								a += 16;
+								b += 16;
+							}
+							if (rank < 6)
+								a = (a * level - a * (100 - level)) / 100;
+							int v = GetPhaseValue(ph, a, b);
+							bonPosition[ph, 8 | rank, nw] = v;
+							bonPosition[ph, rank, nb] = v;
+						}
 		}
 
 		bool GetStop()
