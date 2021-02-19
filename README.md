@@ -1,5 +1,6 @@
 # RapChessCs
-C# chess engine
+C# uci chess engine.
+To use this program you need install  <a href="https://dotnet.microsoft.com/download/dotnet-framework/net48">.NET Framework 4.8</a>
 
 ## Setup GUI Arena
 
