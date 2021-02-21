@@ -547,7 +547,6 @@ namespace Namespce
 			for (int n = moves.Count - 1; n >= 0; n--)
 			{
 				int cm = moves[n];
-				string umo = EmoToUmo(cm);
 				MakeMove(cm);
 				int kp = kingPos[wt ? 1 : 0];
 				if (IsAttacked(wt, kp))
