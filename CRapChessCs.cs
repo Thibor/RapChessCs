@@ -23,7 +23,7 @@ namespace Namespce
 						Console.WriteLine($"id name Rapcschess {version}");
 						Console.WriteLine("id author Thibor Raven");
 						Console.WriteLine("id link https://github.com/Thibor/RapChessCs");
-						Console.WriteLine("option name Skill level type spin default 100 min 0 max 100");
+						Console.WriteLine("option name Skill Level type spin default 100 min 0 max 100");
 						Console.WriteLine("uciok");
 						break;
 					case "isready":
