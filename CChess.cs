@@ -24,6 +24,7 @@ namespace Namespce
 		const int moveflagPromoteBishop = pieceBishop << 20;
 		const int moveflagPromoteKnight = pieceKnight << 20;
 		const int maskPromotion = moveflagPromoteQueen | moveflagPromoteRook | moveflagPromoteBishop | moveflagPromoteKnight;
+		int curPv = 1;
 		int inTime = 0;
 		int inDepth = 0;
 		int inNodes = 0;
@@ -40,6 +41,7 @@ namespace Namespce
 		int g_mainDepth = 1;
 		bool g_stop = false;
 		public int undoIndex = 0;
+		public int multiPv = 1;
 		int[] kingPos = new int[2];
 		int[] arrFieldL = new int[64];
 		int[] arrFieldS = new int[256];
@@ -143,7 +145,7 @@ namespace Namespce
 				{
 					int a = arrRankCon[rank];
 					int b = (arrRankCon[rank] * (rank - 2)) / 4;
-					int v = GetPhaseValue(ph,a,b);
+					int v = GetPhaseValue(ph, a, b);
 					bonConnected[ph, rank, 0] = v;
 					bonConnected[ph, 7 - rank, 1] = v;
 				}
@@ -996,11 +998,15 @@ namespace Namespce
 					if (ply == 1)
 					{
 						string scFm = score > 0xf000 ? $"mate {(0xffff - score) >> 1}" : ((score < -0xf000) ? $"mate {(-0xfffe - score) >> 1}" : $"cp {score}");
-						bsFm = alphaFm;
-						bsPv = nePv;
+						if (curPv == 1)
+						{
+							bsFm = alphaFm;
+							bsPv = nePv;
+						}
 						double t = stopwatch.Elapsed.TotalMilliseconds;
 						double nps = t > 0 ? (g_totalNodes / t) * 1000 : 0;
-						Console.WriteLine($"info currmove {bsFm} currmovenumber {n + 1} nodes {g_totalNodes} time {Convert.ToInt64(t)} nps {Convert.ToInt64(nps)} depth {g_mainDepth} seldepth {neDe} score {scFm} pv {nePv}");
+						string mpv = multiPv > 1 ? $" multipv {curPv}" : "";
+						Console.WriteLine($"info currmove {bsFm} currmovenumber {n + 1} nodes {g_totalNodes} time {Convert.ToInt64(t)} nps {Convert.ToInt64(nps)} depth {g_mainDepth} seldepth {neDe} score {scFm}{mpv} pv {nePv}");
 						usm.RemoveAt(n);
 						usm.Insert(0, cm);
 					}
@@ -1018,19 +1024,21 @@ namespace Namespce
 
 		public void Start(int depth, int time, int nodes)
 		{
-			List<int> mu = GenerateLegalMoves(whiteTurn);
-			if (mu.Count == 0)
+			List<int> mo = GenerateLegalMoves(whiteTurn);
+			if (mo.Count == 0)
 			{
 				Console.WriteLine($"info string no moves");
 				return;
 			}
-			int depthLimit = mu.Count == 1 ? 3 : 100;
+			int depthLimit = mo.Count == 1 ? 3 : 100;
 			g_stop = false;
 			g_totalNodes = 0;
 			g_timeout = time;
 			g_depthout = depth;
 			g_nodeout = nodes;
 			g_mainDepth = 1;
+			curPv = 1;
+			List<int> mu = mo.GetRange(0, mo.Count);
 			do
 			{
 				int alDe = 0;
@@ -1039,10 +1047,17 @@ namespace Namespce
 				double t = stopwatch.Elapsed.TotalMilliseconds;
 				double nps = t > 0 ? (g_totalNodes / t) * 1000 : 0;
 				Console.WriteLine($"info depth {g_mainDepth} nodes {g_totalNodes} time {Convert.ToInt64(t)} nps {Convert.ToInt64(nps)}");
-				if (++g_mainDepth > depthLimit)
-					break;
-				if ((score < -0xf000) || (score > 0xf000))
-					break;
+				if ((++curPv > multiPv) || (mu.Count < 2))
+				{
+					curPv = 1;
+					mu = mo.GetRange(0, mo.Count);
+					if (++g_mainDepth > depthLimit)
+						break;
+					if ((score < -0xf000) || (score > 0xf000))
+						break;
+				}
+				else
+					mu = mu.GetRange(1, mu.Count - 1);
 			} while (!GetStop() && !synStop.GetStop());
 			string[] ponder = bsPv.Split(' ');
 			string pm = ponder.Length > 1 ? $" ponder {ponder[1]}" : "";

@@ -26,12 +26,16 @@ namespace Namespce
 		public int GetInt(string key, int def)
 		{
 			for (int n = 0; n < tokens.Length - 1; n++)
-			{
 				if (tokens[n] == key)
-				{
 					return Int32.Parse(tokens[n + 1]);
-				}
-			}
+			return def;
+		}
+
+		public string GetStr(string key, string def)
+		{
+			for (int n = 0; n < tokens.Length - 1; n++)
+				if (tokens[n] == key)
+					return tokens[n + 1];
 			return def;
 		}
 

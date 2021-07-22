@@ -9,7 +9,7 @@ namespace Namespce
 	{
 		static void Main()
 		{
-			string version = "2020-12-01";
+			string version = "2021-07-22";
 			CUci Uci = new CUci();
 			CChess Chess = new CChess();
 
@@ -23,15 +23,24 @@ namespace Namespce
 						Console.WriteLine($"id name Rapcschess {version}");
 						Console.WriteLine("id author Thibor Raven");
 						Console.WriteLine("id link https://github.com/Thibor/RapChessCs");
-						Console.WriteLine("option name Skill Level type spin default 100 min 0 max 100");
+						Console.WriteLine("option name MultiPV type spin default 1 min 1 max 100");
+						Console.WriteLine("option name SkillLevel type spin default 100 min 0 max 100");
 						Console.WriteLine("uciok");
 						break;
 					case "isready":
 						Console.WriteLine("readyok");
 						break;
 					case "setoption":
-						int level = Uci.GetInt("value",100);
-						Chess.FillBonPosition(level);
+						switch (Uci.GetStr("name", ""))
+						{
+							case "MultiPV":
+								Chess.multiPv = Uci.GetInt("value", 1);
+								break;
+							case "SkillLevel":
+								int level = Uci.GetInt("value", 100);
+								Chess.FillBonPosition(level);
+								break;
+						}
 						break;
 					case "position":
 						string fen = "";
@@ -69,7 +78,8 @@ namespace Namespce
 						int time = Uci.GetInt("movetime", 0);
 						int depth = Uci.GetInt("depth", 0);
 						int node = Uci.GetInt("nodes", 0);
-						if ((time == 0) && (depth == 0) && (node == 0))
+						int infinite = Uci.GetIndex("infinite", 0);
+						if ((time == 0) && (depth == 0) && (node == 0) && (infinite == 0))
 						{
 							double ct = Chess.whiteTurn ? Uci.GetInt("wtime", 0) : Uci.GetInt("btime", 0);
 							double mg = Uci.GetInt("movestogo", 0x40);
