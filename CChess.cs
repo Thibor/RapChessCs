@@ -49,6 +49,7 @@ namespace Namespce
 		ulong[,] g_hashBoard = new ulong[256, 16];
 		int[] boardCastle = new int[256];
 		public bool whiteTurn = true;
+		int bsId = 0;
 		string bsFm = "";
 		string bsPv = "";
 		ulong[] bitBoard = new ulong[16];
@@ -1000,6 +1001,7 @@ namespace Namespce
 						string scFm = score > 0xf000 ? $"mate {(0xffff - score) >> 1}" : ((score < -0xf000) ? $"mate {(-0xfffe - score) >> 1}" : $"cp {score}");
 						if (curPv == 1)
 						{
+							bsId = n;
 							bsFm = alphaFm;
 							bsPv = nePv;
 						}
@@ -1007,8 +1009,6 @@ namespace Namespce
 						double nps = t > 0 ? (g_totalNodes / t) * 1000 : 0;
 						string mpv = multiPv > 1 ? $" multipv {curPv}" : "";
 						Console.WriteLine($"info currmove {bsFm} currmovenumber {n + 1} nodes {g_totalNodes} time {Convert.ToInt64(t)} nps {Convert.ToInt64(nps)} depth {g_mainDepth} seldepth {neDe} score {scFm}{mpv} pv {nePv}");
-						usm.RemoveAt(n);
-						usm.Insert(0, cm);
 					}
 				}
 			}
@@ -1050,6 +1050,8 @@ namespace Namespce
 				if ((++curPv > multiPv) || (mu.Count < 2))
 				{
 					curPv = 1;
+					mo.Insert(0,mo[bsId]);
+					mo.RemoveAt(bsId + 1);
 					mu = mo.GetRange(0, mo.Count);
 					if (++g_mainDepth > depthLimit)
 						break;
