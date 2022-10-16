@@ -1,0 +1,7 @@
+D:\Programming\Repo\RapChessCs\obj\x64\Debug\RapChessCs.csproj.AssemblyReference.cache
+D:\Programming\Repo\RapChessCs\obj\x64\Debug\RapChessCs.csproj.SuggestedBindingRedirects.cache
+D:\Programming\Repo\RapChessCs\obj\x64\Debug\RapChessCs.csproj.CoreCompileInputs.cache
+D:\Programming\Repo\RapChessCs\Debug\RapChessCs.exe
+D:\Programming\Repo\RapChessCs\Debug\RapChessCs.pdb
+D:\Programming\Repo\RapChessCs\obj\x64\Debug\RapChessCs.exe
+D:\Programming\Repo\RapChessCs\obj\x64\Debug\RapChessCs.pdb

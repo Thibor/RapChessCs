@@ -1,6 +1,6 @@
-﻿namespace Namespce
+﻿namespace NSRapchess
 {
-	class CSynStop
+	public class CSynStop
 	{
 		private bool value = true;
 		private readonly object locker = new object();

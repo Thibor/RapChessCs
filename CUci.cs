@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Namespce
+namespace NSRapchess
 {
 	class CUci
 	{
@@ -31,7 +31,7 @@ namespace Namespce
 			return def;
 		}
 
-		public string GetStr(string key, string def)
+		public string GetStr(string key, string def="")
 		{
 			for (int n = 0; n < tokens.Length - 1; n++)
 				if (tokens[n] == key)
