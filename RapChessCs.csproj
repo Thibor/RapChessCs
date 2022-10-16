@@ -103,6 +103,7 @@
     <Compile Include="CUndo.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="CRapLog.cs" />
     <Compile Include="Types.cs" />
   </ItemGroup>
   <ItemGroup>

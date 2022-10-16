@@ -20,7 +20,7 @@ namespace NSRapchess
 		internal const int pieceRook = 0x04;
 		internal const int pieceQueen = 0x05;
 		internal const int pieceKing = 0x06;
-		internal const int colorEmpty = 0;
+		internal const int colEmpty = 0;
 		internal const int colWhite = 8;
 		internal const int colBlack = 0;
 		internal const int maskMove = 0x3f;

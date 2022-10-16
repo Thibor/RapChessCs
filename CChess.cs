@@ -99,7 +99,7 @@ namespace NSRapchess
 			synStop.SetStop(false);
 			g_phase = 0;
 			for (int n = 0; n < 64; n++)
-				CPosition.board[n] = Constants.colorEmpty;
+				CPosition.board[n] = Constants.colEmpty;
 			for (int n = 0; n < 16; n++)
 				CPosition.bitBoard[n] = 0;
 			string[] chunks = fen.Split(' ');
@@ -170,6 +170,63 @@ namespace NSRapchess
 			CPosition.SetColor(whiteTurn ? Constants.colWhite : Constants.colBlack);
 		}
 
+		public string GetFenBase()
+		{
+			string result = "";
+			string[] arr = { " ", "p", "n", "b", "r", "q", "k", " " };
+			for (int y = 0; y < 8; y++)
+			{
+				if (y != 0)
+					result += '/';
+				int empty = 0;
+				for (int x = 0; x < 8; x++)
+				{
+					int piece = CPosition.board[(y << 3) + x];
+					if (piece == Constants.colEmpty)
+						empty++;
+					else
+					{
+						if (empty != 0)
+							result += empty;
+						empty = 0;
+						string pieceChar = arr[(piece & 0x7)];
+						result += ((piece & Constants.colWhite) != 0) ? pieceChar.ToUpper() : pieceChar;
+					}
+				}
+				if (empty != 0)
+				{
+					result += empty;
+				}
+			}
+			return result;
+		}
+
+		public string GetEpd()
+		{
+			string result = GetFenBase();
+			result += CPosition.IsWhiteTurn() ? " w " : " b ";
+			if (castleRights == 0)
+				result += "-";
+			else
+			{
+				if ((castleRights & 1) != 0)
+					result += 'K';
+				if ((castleRights & 2) != 0)
+					result += 'Q';
+				if ((castleRights & 4) != 0)
+					result += 'k';
+				if ((castleRights & 8) != 0)
+					result += 'q';
+			}
+			return $"{result} {SquareToStr(passing)}";
+		}
+
+		public string GetFen()
+		{
+			return $"{GetEpd()} {move50} {halfMove}";
+		}
+
+
 		private static ulong RandomUInt64()
 		{
 			byte[] bytes = new byte[8];
@@ -202,6 +259,8 @@ namespace NSRapchess
 
 		string SquareToStr(int square)
 		{
+			if (square < 0)
+				return "-";
 			int x = square & 0x7;
 			int y = square >> 3;
 			string xs = "abcdefgh";
@@ -257,7 +316,7 @@ namespace NSRapchess
 			if ((move & Constants.moveflagCastleKing) > 0)
 			{
 				CPosition.board[to - 1] = CPosition.board[to + 1];
-				CPosition.board[to + 1] = Constants.colorEmpty;
+				CPosition.board[to + 1] = Constants.colEmpty;
 				int secPiece = (piece & Constants.colWhite) | Constants.pieceRook;
 				CBitboard.Del(ref CPosition.bitBoard[secPiece], to + 1);
 				CBitboard.Add(ref CPosition.bitBoard[secPiece], to - 1);
@@ -265,7 +324,7 @@ namespace NSRapchess
 			else if ((move & Constants.moveflagCastleQueen) > 0)
 			{
 				CPosition.board[to + 1] = CPosition.board[to - 2];
-				CPosition.board[to - 2] = Constants.colorEmpty;
+				CPosition.board[to - 2] = Constants.colEmpty;
 				int secPiece = (piece & Constants.colWhite) | Constants.pieceRook;
 				CBitboard.Del(ref CPosition.bitBoard[secPiece], to - 2);
 				CBitboard.Add(ref CPosition.bitBoard[secPiece], to + 1);
@@ -274,7 +333,7 @@ namespace NSRapchess
 			{
 				capi = CPosition.IsWhiteTurn() ? to + 8 : to - 8;
 				captured = CPosition.board[capi];
-				CPosition.board[capi] = Constants.colorEmpty;
+				CPosition.board[capi] = Constants.colEmpty;
 			}
 			ref CUndo undo = ref undoStack[undoIndex++];
 			undo.captured = captured;
@@ -284,7 +343,7 @@ namespace NSRapchess
 			undo.move50 = move50;
 			hash ^= arrHashBoard[fr, piece];
 			passing = -1;
-			if (captured != Constants.colorEmpty)
+			if (captured != Constants.colEmpty)
 			{
 				move50 = 0;
 				g_phase--;
@@ -304,7 +363,7 @@ namespace NSRapchess
 			CPosition.board[to] = newPiece;
 			CBitboard.Add(ref CPosition.bitBoard[newPiece], to);
 			hash ^= arrHashBoard[to, newPiece];
-			CPosition.board[fr] = Constants.colorEmpty;
+			CPosition.board[fr] = Constants.colEmpty;
 			CBitboard.Del(ref CPosition.bitBoard[piece], fr);
 			castleRights &= boardCastle[fr] & boardCastle[to];
 			halfMove++;
@@ -328,7 +387,7 @@ namespace NSRapchess
 			if ((move & Constants.moveflagCastleKing) > 0)
 			{
 				CPosition.board[to + 1] = CPosition.board[to - 1];
-				CPosition.board[to - 1] = Constants.colorEmpty;
+				CPosition.board[to - 1] = Constants.colEmpty;
 				int secPiece = (piece & Constants.colWhite) | Constants.pieceRook;
 				CBitboard.Del(ref CPosition.bitBoard[secPiece], to - 1);
 				CBitboard.Add(ref CPosition.bitBoard[secPiece], to + 1);
@@ -336,7 +395,7 @@ namespace NSRapchess
 			else if ((move & Constants.moveflagCastleQueen) > 0)
 			{
 				CPosition.board[to - 2] = CPosition.board[to + 1];
-				CPosition.board[to + 1] = Constants.colorEmpty;
+				CPosition.board[to + 1] = Constants.colEmpty;
 				int secPiece = (piece & Constants.colWhite) | Constants.pieceRook;
 				CBitboard.Del(ref CPosition.bitBoard[secPiece], to + 1);
 				CBitboard.Add(ref CPosition.bitBoard[secPiece], to - 2);
@@ -355,11 +414,11 @@ namespace NSRapchess
 			if ((move & Constants.moveflagPassing) > 0)
 			{
 				capI = CPosition.IsWhiteTurn() ? to - 8 : to + 8;
-				CPosition.board[to] = Constants.colorEmpty;
+				CPosition.board[to] = Constants.colEmpty;
 				CBitboard.Del(ref CPosition.bitBoard[piece], to);
 			}
 			CPosition.board[capI] = capP;
-			if (capP != Constants.colorEmpty)
+			if (capP != Constants.colEmpty)
 			{
 				g_phase++;
 				CBitboard.Add(ref CPosition.bitBoard[capP], capI);
@@ -571,6 +630,8 @@ namespace NSRapchess
 					break;
 			} while (!engineStop && needDepth);
 			Console.WriteLine($"bestmove {bsFm}{bsPm}");
+			if (Program.bench.start)
+				Program.bench.Next();
 		}
 
 

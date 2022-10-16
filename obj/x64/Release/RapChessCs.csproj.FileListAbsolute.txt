@@ -1,0 +1,5 @@
+D:\Programming\Repo\RapChessCs\Release\RapChessCs.exe
+D:\Programming\Repo\RapChessCs\obj\x64\Release\RapChessCs.csproj.AssemblyReference.cache
+D:\Programming\Repo\RapChessCs\obj\x64\Release\RapChessCs.csproj.SuggestedBindingRedirects.cache
+D:\Programming\Repo\RapChessCs\obj\x64\Release\RapChessCs.csproj.CoreCompileInputs.cache
+D:\Programming\Repo\RapChessCs\obj\x64\Release\RapChessCs.exe
