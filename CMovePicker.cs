@@ -20,7 +20,7 @@ namespace NSRapchess
 		int index;
 		int phase = 0;
 		readonly MList pickerList = new MList();
-		readonly CRecList recList = new CRecList();
+		readonly MList recList = new MList();
 		MList startMoves = new MList();
 		readonly MList usedMoves = new MList();
 
@@ -36,38 +36,40 @@ namespace NSRapchess
 			phase = 2;
 		}
 
-		public CMovePicker(Hash hash, MList moves)
+		public CMovePicker(Hash hash, MList moves, Move killer1, Move killer2)
 		{
-			recList = CTranspositionTable.GetRecList(hash);
+			recList = CTranspositionTable.GetMoves(hash);
+			recList.Add(killer1);
+			recList.Add(killer2);
 			startMoves = moves;
 		}
 
-		public CMovePicker(Hash hash)
+		public CMovePicker(Hash hash, Move killer1, Move killer2)
 		{
-			recList = CTranspositionTable.GetRecList(hash);
+			recList = CTranspositionTable.GetMoves(hash);
+			recList.Add(killer1);
+			recList.Add(killer2);
 		}
 
-		public bool NextMove(out CRec rec)
+		public bool NextMove(out Move move)
 		{
-			rec = new CRec();
 			//send rec.move
 			if (phase == 0)
 			{
 				while (index < recList.count)
 				{
-					rec = recList.table[index++];
-					if (CMovesGenerator.IsHashMoveValid(rec.move))
-						if (usedMoves.Find(rec.move) == -1)
-						{
-							usedMoves.Add(rec.move);
-							return true;
-						}
+					move = recList.table[index++].move;
+					if ((usedMoves.Find(move) == -1) && CMovesGenerator.IsHashMoveValid(move))
+					{
+						usedMoves.Add(move);
+						return true;
+					}
 				}
 				if (startMoves.count == 0)
 				{
 					startMoves = CMovesGenerator.GenerateMovesAll();
 					Debug.Assert(startMoves.table[0].move > 0);
-					if(startMoves.table[0].move<0)
+					if (startMoves.table[0].move < 0)
 						startMoves = CMovesGenerator.GenerateMovesAll();
 				}
 				for (int n = 0; n < usedMoves.count; n++)
@@ -81,15 +83,17 @@ namespace NSRapchess
 				for (int n = 0; n < startMoves.count; n++)
 				{
 					int m = startMoves.table[n].move;
-					Debug.Assert(m>0);
 					int s = GetScore(m);
 					pickerList.Add(new MoveStack(m, s));
 				}
 				index = 0;
-				phase = 3;
+				phase = 2;
 			}
 			if (index >= pickerList.count)
+			{
+				move = 0;
 				return false;
+			}
 			int bstI = index;
 			int bstS = int.MinValue;
 			for (int n = index; n < pickerList.count; n++)
@@ -98,9 +102,7 @@ namespace NSRapchess
 					bstI = n;
 					bstS = pickerList.table[n].score;
 				}
-			rec.move = pickerList.table[bstI].move;
-			rec.value = pickerList.table[bstI].score;
-			Debug.Assert(rec.move>0);
+			move = pickerList.table[bstI].move;
 			(pickerList.table[bstI], pickerList.table[index]) = (pickerList.table[index], pickerList.table[bstI]);
 			index++;
 			return true;

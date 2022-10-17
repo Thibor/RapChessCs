@@ -61,13 +61,16 @@ namespace NSRapchess
 		public static int[][] bonusMobilityMg = new int[8][] { new int[] { }, new int[] { },new int[9]{-62,-53,-12,-4,3,13,22,28,33},
 			new int[14]{ -48, -20, 16, 26, 38, 51, 55, 63, 63, 68, 81, 81, 91, 98},
 	new int[15]{ -60, -20, 2, 3, 3, 11, 22, 31, 40, 40, 41, 48, 57, 57, 62},
-	new int[28]{-32, -16, -8, -4, -2, 1, 2, 4, 8, 16, 32, 64, 65, 66, 67, 67, 72, 72, 77, 79, 93, 108, 108, 108, 110, 114, 114, 116},new int[]{},new int[] {} };
+	new int[28],
+	new int[]{},
+	new int[]{}};
 		public static int[][] bonusMobilityEg = new int[8][] {
-			 new int[] { }, new int[] { },
+	new int[]{},
+	new int[]{},
 	new int[9]{-81, -56, -31, -16, 5, 11, 17, 20, 25},
 	new int[14]{  -59, -23, -3, 13, 24, 42, 54, 57, 65, 73, 78, 86, 88, 97},
 	new int[15]{ -78, -17, 23, 39, 70, 99, 103, 121, 134, 139, 158, 164, 168, 169, 172},
-	new int[28]{  -64, -32, -16, -8, -4, -2, -1, 1, 2, 4, 8, 16, 32, 64, 128, 133, 136, 141, 147, 150, 151, 168, 168, 171, 182, 182, 192, 219},new int[] { }, new int[] { } };
+	new int[28],new int[] { }, new int[] { } };
 
 		public static void Init()
 		{
@@ -356,9 +359,9 @@ namespace NSRapchess
 			return (mg * CChess.g_phase + eg * (32 - CChess.g_phase)) / 32;
 		}
 
-		public static bool IsPassed(Color usCol,int fr)
+		public static bool IsPassed(Color usCol, int fr)
 		{
-			return (CPosition.bitBoard[(usCol ^ Constants.maskColor) | Constants.piecePawn] & bbPassed[fr,usCol>>3]) == 0;
+			return (CPosition.bitBoard[(usCol ^ Constants.maskColor) | Constants.piecePawn] & bbPassed[fr, usCol >> 3]) == 0;
 		}
 
 		public static void ScorePawn(RScore rs, ref int mg, ref int eg)
@@ -383,7 +386,7 @@ namespace NSRapchess
 					mg -= 4;
 					eg -= 8;
 				}
-				if (IsPassed(rs.usCol,fr))
+				if (IsPassed(rs.usCol, fr))
 					score += bonPassed[fr, rs.w];
 				score -= 4 * arrDistance[rs.usKingPosition, fr];
 			}
@@ -428,7 +431,7 @@ namespace NSRapchess
 				int count = CountMovesBishop(rs, fr);
 				mg += bonusMobilityMg[Constants.pieceBishop][count];
 				eg += bonusMobilityEg[Constants.pieceBishop][count];
-				//if (((CPosition.bitBoard[rs.enCol | Constants.pieceQueen] | CPosition.bitBoard[rs.enCol | Constants.pieceKing]) & bbAttackBishop[fr]) > 0)score += 8;
+				if (((CPosition.bitBoard[rs.enCol | Constants.pieceQueen] | CPosition.bitBoard[rs.enCol | Constants.pieceKing]) & bbAttackBishop[fr]) > 0)score += 8;
 				if (((CPosition.bitBoard[rs.enCol | Constants.piecePawn] & bbOutpost[fr, rs.w]) == 0) && ((CPosition.bitBoard[rs.usCol | Constants.piecePawn] & bbSupported[fr, rs.w]) > 0))
 				{
 					mg += 33;
@@ -452,12 +455,12 @@ namespace NSRapchess
 				int count = CountMovesRook(rs, fr);
 				mg += bonusMobilityMg[Constants.pieceRook][count];
 				eg += bonusMobilityEg[Constants.pieceRook][count];
-				//if (((CPosition.bitBoard[rs.enCol | Constants.pieceQueen]|CPosition.bitBoard[rs.enCol | Constants.pieceKing]) & bbAttackRook[fr]) > 0)score += 8;
-				/*if ((CPosition.bitBoard[rs.usCol | Constants.piecePawn] & bbDoubled[fr]) == 0)
+				if (((CPosition.bitBoard[rs.enCol | Constants.pieceQueen]|CPosition.bitBoard[rs.enCol | Constants.pieceKing]) & bbAttackRook[fr]) > 0)score += 8;
+				if ((CPosition.bitBoard[rs.usCol | Constants.piecePawn] & bbDoubled[fr]) == 0)
 					if ((CPosition.bitBoard[rs.enCol | Constants.piecePawn] & bbDoubled[fr]) == 0)
 						score += 16;
 					else
-						score += 8;*/
+						score += 8;
 			}
 			mg += score;
 			eg += score;

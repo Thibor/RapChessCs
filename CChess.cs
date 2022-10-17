@@ -3,6 +3,12 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 
+using Color = System.Int32;
+using Move = System.Int32;
+using Square = System.Int32;
+using Bitboard = System.UInt64;
+using Hash = System.UInt64;
+
 namespace NSRapchess
 //move 
 //6 bits from
@@ -20,17 +26,17 @@ namespace NSRapchess
 		bool nullMove;
 		int inTime = 0;
 		int inDepth = 0;
-		int inNodes = 0;
+		ulong inNodes = 0;
 		public static int castleRights = 0xf;
 		ulong hash = 0;
-		public static int passing = -1;
+		public static int passant = -1;
 		public byte move50 = 0;
 		public ushort halfMove = 0;
 		public static int g_phase = 32;
-		int nodeCur = 0;
+		ulong nodeCur = 0;
 		int timeOut = 0;
 		int depthOut = 0;
-		int nodeOut = 0;
+		ulong nodeOut = 0;
 		int depthCur = 1;
 		bool engineStop = false;
 		public int undoIndex = 0;
@@ -38,6 +44,7 @@ namespace NSRapchess
 		readonly ulong[,] arrHashBoard = new ulong[64, 16];
 		readonly int[] boardCastle = new int[64];
 		readonly CUndo[] undoStack = new CUndo[0xfff];
+		public static Move[,] killers = new Move[Constants.MAX_PLY, 2];
 		Thread startThread;
 		public static MList moveList = new MList();
 		public static List<int> bstMoves = new List<int>();
@@ -47,6 +54,35 @@ namespace NSRapchess
 		public static bool optMatePruning = true;
 		public static bool optNullPruning = true;
 		public static int optMultiPv = 1;
+
+		public ushort MoveNumber
+		{
+			get
+			{
+				return (ushort)((halfMove >> 1) + 1);
+			}
+			set
+			{
+				halfMove = value;
+				if (halfMove > 0)
+					halfMove--;
+				halfMove <<= 1;
+				if (!CPosition.IsWhiteTurn())
+					halfMove++;
+			}
+		}
+
+		public string Passant
+		{
+			get
+			{
+				return SquareToStr(passant);
+			}
+			set
+			{
+				passant = StrToSquare(value);
+			}
+		}
 
 		public CChess()
 		{
@@ -149,6 +185,7 @@ namespace NSRapchess
 				}
 			}
 			bool whiteTurn = chunks[1] == "w";
+			CPosition.SetColor(whiteTurn ? Constants.colWhite : Constants.colBlack);
 			castleRights = 0;
 			if (chunks[2].IndexOf('K') != -1)
 				castleRights |= 1;
@@ -158,16 +195,10 @@ namespace NSRapchess
 				castleRights |= 4;
 			if (chunks[2].IndexOf('q') != -1)
 				castleRights |= 8;
-			passing = -1;
-			if (chunks[3].IndexOf('-') == -1)
-				passing = StrToSquare(chunks[3]);
-			move50 = 0;
-			halfMove = ushort.Parse(chunks[5]);
-			if (halfMove > 0) halfMove--;
-			halfMove <<= 1;
-			if (!whiteTurn) halfMove++;
-			undoIndex = 0;
-			CPosition.SetColor(whiteTurn ? Constants.colWhite : Constants.colBlack);
+			Passant = chunks.Length < 4 ? "-" : chunks[3];
+			move50 = chunks.Length < 5 ? (byte)0 : byte.Parse(chunks[4]);
+			MoveNumber = chunks.Length < 6 ? (ushort)1 : ushort.Parse(chunks[5]);
+			undoIndex = move50;
 		}
 
 		public string GetFenBase()
@@ -218,12 +249,12 @@ namespace NSRapchess
 				if ((castleRights & 8) != 0)
 					result += 'q';
 			}
-			return $"{result} {SquareToStr(passing)}";
+			return $"{result} {Passant}";
 		}
 
 		public string GetFen()
 		{
-			return $"{GetEpd()} {move50} {halfMove}";
+			return $"{GetEpd()} {move50} {MoveNumber}";
 		}
 
 
@@ -270,6 +301,8 @@ namespace NSRapchess
 
 		int StrToSquare(string s)
 		{
+			if (s == "-")
+				return -1;
 			string xs = "abcdefgh";
 			string ys = "87654321";
 			int x = xs.IndexOf(s[0]);
@@ -338,11 +371,11 @@ namespace NSRapchess
 			ref CUndo undo = ref undoStack[undoIndex++];
 			undo.captured = captured;
 			undo.hash = hash;
-			undo.passing = passing;
+			undo.passing = passant;
 			undo.castle = castleRights;
 			undo.move50 = move50;
 			hash ^= arrHashBoard[fr, piece];
-			passing = -1;
+			passant = -1;
 			if (captured != Constants.colEmpty)
 			{
 				move50 = 0;
@@ -352,9 +385,9 @@ namespace NSRapchess
 			else if (rank == Constants.piecePawn)
 			{
 				if (to == (fr + 16))
-					passing = fr + 8;
+					passant = fr + 8;
 				if (to == (fr - 16))
-					passing = fr - 8;
+					passant = fr - 8;
 				move50 = 0;
 			}
 			else
@@ -378,7 +411,7 @@ namespace NSRapchess
 			int piece = CPosition.board[to];
 			int capI = to;
 			CUndo undo = undoStack[--undoIndex];
-			passing = undo.passing;
+			passant = undo.passing;
 			castleRights = undo.castle;
 			move50 = undo.move50;
 			hash = undo.hash;
@@ -439,14 +472,14 @@ namespace NSRapchess
 			if (score > alpha)
 				alpha = score;
 			CMovePicker movePicker = new CMovePicker();
-			while (movePicker.NextMove(out CRec rec))
+			while (movePicker.NextMove(out Move move))
 			{
-				MakeMove(rec.move);
+				MakeMove(move);
 				if (CMovesGenerator.IsSquareAttacked(CPosition.enKing, CPosition.usCol))
 					score = -CHECKMATE_INFINITY;
 				else
 					score = -Quiesce(ply + 1, -beta, -alpha);
-				UnmakeMove(rec.move);
+				UnmakeMove(move);
 				if (score >= beta)
 					return score;
 				if (score > alpha)
@@ -495,7 +528,7 @@ namespace NSRapchess
 					return beta;
 			}
 
-			int recMove = 0;
+			Move recMove = 0;
 			RecType recType = RecType.alpha;
 			int legalMoves = 0;
 			if (ply > 0)
@@ -505,13 +538,12 @@ namespace NSRapchess
 				if ((rec.type == RecType.beta) && (rec.value >= beta)) return rec.value;
 				if ((rec.type == RecType.alpha) && (rec.value <= alpha)) return rec.value;
 			}
-			CMovePicker movePicker = ply == 0 ? new CMovePicker(hash, moveList) : new CMovePicker(hash);
-			while (movePicker.NextMove(out CRec rec))
+			CMovePicker movePicker = ply == 0 ? new CMovePicker(hash, moveList, killers[ply, 0], killers[ply, 1]) : new CMovePicker(hash, killers[ply, 0], killers[ply, 1]);
+			while (movePicker.NextMove(out Move move))
 			{
 				int score = -CHECKMATE_INFINITY;
-				bool reducible = !usChecked && (ply > 0) && (legalMoves > 0) && (alpha > -CHECKMATE_NEAR) && (!CScore.IsPassed(CPosition.usCol, rec.move & Constants.maskMove)) && !CMovesGenerator.IsSquareAttacked(CPosition.usKing, CPosition.enCol);
-				//if (reducible && (rec.value < 0))continue;
-				MakeMove(rec.move);
+				bool reducible = !usChecked && (ply > 0) && (legalMoves > 0) && (alpha > -CHECKMATE_NEAR) && (!CScore.IsPassed(CPosition.usCol, move & Constants.maskMove)) && !CMovesGenerator.IsSquareAttacked(CPosition.usKing, CPosition.enCol);
+				MakeMove(move);
 				if (!CMovesGenerator.IsSquareAttacked(CPosition.enKing, CPosition.usCol))
 				{
 					if ((move50 >= 100) || (IsRepetition()))
@@ -524,28 +556,32 @@ namespace NSRapchess
 						if (score > alpha)
 							score = -Search(ply + 1, depth - 1, -beta, -alpha);
 					}
+					if (recMove == 0) recMove = move;
 					legalMoves++;
 				}
-				UnmakeMove(rec.move);
+				UnmakeMove(move);
 				if (score >= beta)
 				{
-					CTranspositionTable.SetRec(new CRec(hash, depth, rec.move, score, RecType.beta, halfMove));
+					killers[ply, 1] = killers[ply, 0];
+					killers[ply, 0] = move;
+					CTranspositionTable.SetRec(new CRec(hash, depth, move, score, RecType.beta, halfMove));
 					return beta;
 				}
 				if (score > alpha)
 				{
 					alpha = score;
-					recMove = rec.move;
+					recMove = move;
 					recType = RecType.score;
 					if (ply == 0)
 					{
-						CTranspositionTable.SetRec(new CRec(hash, depth, rec.move, score, RecType.score, halfMove));
+						CTranspositionTable.SetRec(new CRec(hash, depth, move, score, RecType.score, halfMove));
+						string bsFm = EmoToUmo(move);
 						string pv = GetBstMoves();
 						string scFm = score > CHECKMATE_NEAR ? $"mate {(CHECKMATE_MAX - score) >> 1}" : ((score < -CHECKMATE_NEAR) ? $"mate {(-CHECKMATE_MAX - score + 2) >> 1}" : $"cp {score}");
 						double t = stopwatch.Elapsed.TotalMilliseconds;
 						double nps = t > 0 ? nodeCur / t * 1000 : 0;
 						string mpv = optMultiPv > 1 ? $" multipv {curPv}" : String.Empty;
-						Console.WriteLine($"info time {Convert.ToInt64(t)} nodes {nodeCur} nps {Convert.ToInt64(nps)} depth {depthCur} seldepth {bstMoves.Count} hashfull {CTranspositionTable.Permill()} score {scFm}{mpv} pv {pv}");
+						Console.WriteLine($"info time {Convert.ToInt64(t)} nodes {nodeCur} nps {Convert.ToInt64(nps)} depth {depthCur} seldepth {bstMoves.Count} currmove {bsFm} currmovenumber {legalMoves} hashfull {CTranspositionTable.Permill()} score {scFm}{mpv} pv {pv}");
 					}
 				}
 			}
@@ -566,13 +602,11 @@ namespace NSRapchess
 			int count = 0;
 			do
 			{
-				CTranspositionTable.GetRecScore(hash, out CRec rec);
-				if (rec.type != RecType.score)
+				CTranspositionTable.GetRecScore(hash, out Move move);
+				if (!CMovesGenerator.IsHashMoveValid(move))
 					break;
-				if (!CMovesGenerator.IsHashMoveValid(rec.move))
-					break;
-				bstMoves.Add(rec.move);
-				MakeMove(rec.move);
+				bstMoves.Add(move);
+				MakeMove(move);
 				if (CMovesGenerator.IsSquareAttacked(CPosition.enKing, CPosition.usCol))
 					break;
 				count++;
@@ -584,7 +618,7 @@ namespace NSRapchess
 			return result.Trim();
 		}
 
-		public void Start(int depth, int time, int nodes)
+		public void Start(int depth, int time, ulong nodes)
 		{
 			MList mo = GenerateMovesLegal();
 			if (mo.count == 0)
@@ -609,9 +643,9 @@ namespace NSRapchess
 				nullMove = optNullPruning;
 				Console.WriteLine($"info depth {depthCur}");
 				Search(0, depthCur, -CHECKMATE_MAX, CHECKMATE_MAX);
-				double t = stopwatch.Elapsed.TotalMilliseconds;
-				double nps = t > 0 ? nodeCur / t * 1000 : 0;
-				Console.WriteLine($"info time {Convert.ToInt64(t)} nodes {nodeCur} nps {Convert.ToInt64(nps)}");
+				double ms = stopwatch.Elapsed.TotalMilliseconds;
+				double nps = ms > 0 ? (nodeCur * 1000.0) / ms : 0;
+				Console.WriteLine($"info time {Convert.ToInt64(ms)} nodes {nodeCur} nps {Convert.ToInt64(nps)}");
 				if (curPv == 1)
 				{
 					if (bstMoves.Count > 0)
@@ -631,7 +665,10 @@ namespace NSRapchess
 			} while (!engineStop && needDepth);
 			Console.WriteLine($"bestmove {bsFm}{bsPm}");
 			if (Program.bench.start)
+			{
+				Program.bench.nodes += nodeCur;
 				Program.bench.Next();
+			}
 		}
 
 
@@ -641,7 +678,7 @@ namespace NSRapchess
 			stopwatch.Restart();
 			int time = Program.uci.GetInt("movetime", 0);
 			int depth = Program.uci.GetInt("depth", 0);
-			int node = Program.uci.GetInt("nodes", 0);
+			ulong node = (ulong)Program.uci.GetInt("nodes", 0);
 			int infinite = Program.uci.GetIndex("infinite", 0);
 			if ((time == 0) && (depth == 0) && (node == 0) && (infinite == 0))
 			{
@@ -659,7 +696,7 @@ namespace NSRapchess
 			Start(inDepth, inTime, inNodes);
 		}
 
-		public void StartThread(int depth, int time, int nodes)
+		public void StartThread(int depth, int time, ulong nodes)
 		{
 			inDepth = depth;
 			inTime = time;

@@ -12,11 +12,14 @@ namespace NSRapchess
 		public bool start = false;
 		bool modeFen = true;
 		bool modeScore = true;
+		bool modeSort = false;
+		public ulong nodes = 0;
 		string modeGo = "go infinite";
 		int index = 0;
 		readonly Stopwatch timer = new Stopwatch();
 		List<string> list;
 		readonly CRapLog log = new CRapLog();
+		List<string> fenList = new List<string>();
 
 		string GetTimeElapsed()
 		{
@@ -31,10 +34,20 @@ namespace NSRapchess
 			log.Add(msg);
 		}
 
+		void Sort()
+		{
+			fenList.Sort();
+			fenList.Insert(0,modeGo);
+			fenList.Insert(0,"sort");
+			File.WriteAllLines("bench.txt", fenList);
+		}
+
 		void BenchStart()
 		{
 			index = 0;
 			start = true;
+			nodes = 0;
+			fenList.Clear();
 			timer.Restart();
 			WriteLine("bench start");
 			Next();
@@ -44,12 +57,21 @@ namespace NSRapchess
 		{
 			start = false;
 			timer.Stop();
-			WriteLine($"time {GetTimeElapsed()}");
+			double ms = timer.Elapsed.TotalMilliseconds;
+			double nps = ms > 0 ? (nodes * 1000.0)/ ms : 0;
+			WriteLine($"time {GetTimeElapsed()} nodes {nodes:N0} nps {nps:N0}");
 			WriteLine("bench end");
+			if (modeSort)
+				Sort();
 		}
 
 		void Read()
 		{
+			if (index >= list.Count)
+			{
+				BenchFinish();
+				return;
+			}
 			CUci uci2 = new CUci();
 			while (index < list.Count)
 			{
@@ -73,6 +95,9 @@ namespace NSRapchess
 						modeScore = false;
 						modeGo = order;
 						continue;
+					case "sort":
+						modeSort = true;
+						continue;
 				}
 				if (modeFen)
 					Program.chess.SetFen(order);
@@ -85,14 +110,14 @@ namespace NSRapchess
 					CScore.Trace();
 				else
 				{
-					log.Add(Program.chess.GetFen());
+					string fen = Program.chess.GetFen();
+					fenList.Add(fen);
+					log.Add(fen);
 					Program.uci.SetMsg(modeGo);
 					Program.chess.UciGo();
 					break;
 				}
 			}
-			if (index >= list.Count)
-				BenchFinish();
 		}
 
 		public void Next()

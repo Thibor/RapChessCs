@@ -227,6 +227,8 @@ namespace NSRapchess
 
 		public static bool IsHashMoveValid(int move)
 		{
+			if (move == 0)
+				return false;
 			bool wt = CPosition.IsWhiteTurn();
 			int fr = move & Constants.maskMove;
 			int to = (move >> 6) & Constants.maskMove;
@@ -241,7 +243,7 @@ namespace NSRapchess
 				if (rank != Constants.piecePawn)
 					return false;
 				if (isPassing)
-					return (to == CChess.passing) && IsSquareAttackedFromTo(fr, to);
+					return (to == CChess.passant) && IsSquareAttackedFromTo(fr, to);
 				if (CPosition.IsRank(fr, 7) && !isPromotion)
 					return false;
 				int del = wt ? -8 : 8;
@@ -434,8 +436,8 @@ namespace NSRapchess
 		{
 			MList moves = new MList();
 			ulong paBitboard = 0;
-			if (CChess.passing > 0)
-				paBitboard = 1ul << CChess.passing;
+			if (CChess.passant > 0)
+				paBitboard = 1ul << CChess.passant;
 
 
 			ulong usbb = CPosition.bitBoard[Constants.piecePawn | CPosition.usCol];
@@ -446,7 +448,7 @@ namespace NSRapchess
 				while (bb > 0)
 				{
 					int to = CBitboard.Pop(ref bb);
-					int flag = to == CChess.passing ? Constants.moveflagPassing : 0;
+					int flag = to == CChess.passant ? Constants.moveflagPassing : 0;
 					GenerateMovesPawn(moves, fr, to, flag);
 				}
 			}
@@ -510,8 +512,8 @@ namespace NSRapchess
 			MList moves = new MList();
 			bool wt = CPosition.IsWhiteTurn();
 			ulong paBitboard = 0;
-			if (CChess.passing > 0)
-				paBitboard = 1ul << CChess.passing;
+			if (CChess.passant > 0)
+				paBitboard = 1ul << CChess.passant;
 
 			ulong usbb = CPosition.bitBoard[Constants.piecePawn | CPosition.usCol];
 			while (usbb > 0)
@@ -521,7 +523,7 @@ namespace NSRapchess
 				while (bb > 0)
 				{
 					int to = CBitboard.Pop(ref bb);
-					int flag = to == CChess.passing ? Constants.moveflagPassing : 0;
+					int flag = to == CChess.passant ? Constants.moveflagPassing : 0;
 					GenerateMovesPawn(moves, fr, to, flag);
 				}
 
