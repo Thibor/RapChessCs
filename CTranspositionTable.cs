@@ -102,20 +102,6 @@ namespace NSRapchess
 			return (int)(used * 1000ul / (ulong)table.Length);
 		}
 
-		public static CRecList GetRecList(Hash hash)
-		{
-			CRecList moves = new CRecList();
-			int index = (int)(hash & hashMask);
-			for (int n = 0; n < clusterSize; n++)
-			{
-				CRec rec = table[index + n];
-				if (rec.hash == hash)
-					moves.Add(rec);
-			}
-			return moves;
-		}
-
-
 		public static MList GetMoves(Hash hash)
 		{
 			MList moves = new MList();

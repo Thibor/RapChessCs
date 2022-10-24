@@ -16,7 +16,7 @@ namespace NSRapchess
 //4 bits promotion
 //4 bits move flag
 {
-	public partial class CChess
+	public partial class CEngine
 	{
 		const int CHECKMATE_MAX = 0x7ff0;
 		const int CHECKMATE_NEAR = 0x7000;
@@ -29,7 +29,6 @@ namespace NSRapchess
 		ulong inNodes = 0;
 		public static int castleRights = 0xf;
 		ulong hash = 0;
-		public static int passant = -1;
 		public byte move50 = 0;
 		public ushort halfMove = 0;
 		public static int g_phase = 32;
@@ -72,19 +71,7 @@ namespace NSRapchess
 			}
 		}
 
-		public string Passant
-		{
-			get
-			{
-				return SquareToStr(passant);
-			}
-			set
-			{
-				passant = StrToSquare(value);
-			}
-		}
-
-		public CChess()
+		public CEngine()
 		{
 			CTranspositionTable.Clear();
 			hash = RandomUInt64();
@@ -195,7 +182,7 @@ namespace NSRapchess
 				castleRights |= 4;
 			if (chunks[2].IndexOf('q') != -1)
 				castleRights |= 8;
-			Passant = chunks.Length < 4 ? "-" : chunks[3];
+			CPosition.Passant = chunks.Length < 4 ? "-" : chunks[3];
 			move50 = chunks.Length < 5 ? (byte)0 : byte.Parse(chunks[4]);
 			MoveNumber = chunks.Length < 6 ? (ushort)1 : ushort.Parse(chunks[5]);
 			undoIndex = move50;
@@ -249,7 +236,7 @@ namespace NSRapchess
 				if ((castleRights & 8) != 0)
 					result += 'q';
 			}
-			return $"{result} {Passant}";
+			return $"{result} {CPosition.Passant}";
 		}
 
 		public string GetFen()
@@ -288,7 +275,7 @@ namespace NSRapchess
 			return 0;
 		}
 
-		string SquareToStr(int square)
+		public static string SquareToStr(int square)
 		{
 			if (square < 0)
 				return "-";
@@ -299,7 +286,7 @@ namespace NSRapchess
 			return $"{xs[x]}{ys[y]}";
 		}
 
-		int StrToSquare(string s)
+		public static int StrToSquare(string s)
 		{
 			if (s == "-")
 				return -1;
@@ -371,11 +358,11 @@ namespace NSRapchess
 			ref CUndo undo = ref undoStack[undoIndex++];
 			undo.captured = captured;
 			undo.hash = hash;
-			undo.passing = passant;
+			undo.passing = CPosition.passant;
 			undo.castle = castleRights;
 			undo.move50 = move50;
 			hash ^= arrHashBoard[fr, piece];
-			passant = -1;
+			CPosition.passant = -1;
 			if (captured != Constants.colEmpty)
 			{
 				move50 = 0;
@@ -385,9 +372,9 @@ namespace NSRapchess
 			else if (rank == Constants.piecePawn)
 			{
 				if (to == (fr + 16))
-					passant = fr + 8;
+					CPosition.passant = fr + 8;
 				if (to == (fr - 16))
-					passant = fr - 8;
+					CPosition.passant = fr - 8;
 				move50 = 0;
 			}
 			else
@@ -411,7 +398,7 @@ namespace NSRapchess
 			int piece = CPosition.board[to];
 			int capI = to;
 			CUndo undo = undoStack[--undoIndex];
-			passant = undo.passing;
+			CPosition.passant = undo.passing;
 			castleRights = undo.castle;
 			move50 = undo.move50;
 			hash = undo.hash;

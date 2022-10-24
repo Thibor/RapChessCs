@@ -8,7 +8,7 @@ namespace NSRapchess
 {
 	class Program
 	{
-		public static CChess chess = new CChess();
+		public static CEngine engine = new CEngine();
 		public static CUci uci = new CUci();
 		public static CBench bench = new CBench();
 
@@ -28,7 +28,7 @@ namespace NSRapchess
 						Console.WriteLine("id link https://github.com/Thibor/RapChessCs");
 						Console.WriteLine("option name MatePruning type check default true");
 						Console.WriteLine("option name NullPruning type check default true");
-						Console.WriteLine($"option name MultiPV type spin default {CChess.optMultiPv} min 1 max 100");
+						Console.WriteLine($"option name MultiPV type spin default {CEngine.optMultiPv} min 1 max 100");
 						Console.WriteLine("option name SkillLevel type spin default 100 min 0 max 100");
 						Console.WriteLine($"option name Hash type spin default {CTranspositionTable.DEFAULT_SIZE_MB} min 0 max 200");
 						Console.WriteLine("uciok");
@@ -40,17 +40,17 @@ namespace NSRapchess
 						switch (uci.GetStr("name", ""))
 						{
 							case "MatePruning":
-								CChess.optMatePruning = uci.GetStr("value", "true") == "true";
-								string mp = CChess.optMatePruning ? "on" : "off";
+								CEngine.optMatePruning = uci.GetStr("value", "true") == "true";
+								string mp = CEngine.optMatePruning ? "on" : "off";
 								Console.WriteLine($"info string MatePruning {mp}");
 								break;
 							case "NullPruning":
-								CChess.optNullPruning = uci.GetStr("value", "true") == "true";
-								string np = CChess.optNullPruning ? "on" : "off";
+								CEngine.optNullPruning = uci.GetStr("value", "true") == "true";
+								string np = CEngine.optNullPruning ? "on" : "off";
 								Console.WriteLine($"info string NullPruning {np}");
 								break;
 							case "MultiPV":
-								CChess.optMultiPv = uci.GetInt("value", CChess.optMultiPv);
+								CEngine.optMultiPv = uci.GetInt("value", CEngine.optMultiPv);
 								break;
 							case "SkillLevel":
 								int level = uci.GetInt("value", 100);
@@ -80,7 +80,7 @@ namespace NSRapchess
 								fen += uci.tokens[n];
 							}
 						}
-						chess.SetFen(fen);
+						engine.SetFen(fen);
 						lo = uci.GetIndex("moves", 0);
 						hi = uci.GetIndex("fen", uci.tokens.Length);
 						if (lo > 0)
@@ -92,26 +92,26 @@ namespace NSRapchess
 							{
 								string m = uci.tokens[n];
 								moves += $" {m}";
-								int emo = chess.UmoToEmo(m);
+								int emo = engine.UmoToEmo(m);
 								if (emo == 0)
 								{
 									Console.WriteLine($"info string wrong moves {moves}");
 									break;
 								}
-								chess.MakeMove(emo);
-								if (chess.move50 == 0)
-									chess.undoIndex = 0;
+								engine.MakeMove(emo);
+								if (engine.move50 == 0)
+									engine.undoIndex = 0;
 							}
 						}
 						break;
 					case "go":
-						chess.UciGo();
+						engine.UciGo();
 						break;
 					case "stop":
-						chess.synStop.SetStop(true);
+						engine.synStop.SetStop(true);
 						break;
 					case "quit":
-						chess.synStop.SetStop(true);
+						engine.synStop.SetStop(true);
 						return;
 					case "bench":
 						bench.Start();

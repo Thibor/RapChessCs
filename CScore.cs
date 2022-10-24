@@ -84,83 +84,83 @@ namespace NSRapchess
 			for (int y = 0; y < 8; y++)
 				for (int x = 0; x < 8; x++)
 				{
-					int iw = (y << 3) | x;
-					CBitboard.Add(ref bbSupported[iw, 1], x - 1, y + 1);
-					CBitboard.Add(ref bbSupported[iw, 0], x - 1, y - 1);
-					CBitboard.Add(ref bbSupported[iw, 1], x + 1, y + 1);
-					CBitboard.Add(ref bbSupported[iw, 0], x + 1, y - 1);
-					CBitboard.Add(ref bbKingSafety[iw, 1], x, y - 1);
-					CBitboard.Add(ref bbKingSafety[iw, 1], x - 1, y - 1);
-					CBitboard.Add(ref bbKingSafety[iw, 1], x + 1, y - 1);
-					CBitboard.Add(ref bbKingSafety[iw, 1], x, y - 2);
-					CBitboard.Add(ref bbKingSafety[iw, 1], x - 1, y - 2);
-					CBitboard.Add(ref bbKingSafety[iw, 1], x + 1, y - 2);
-					CBitboard.Add(ref bbKingSafety[iw, 0], x, y + 1);
-					CBitboard.Add(ref bbKingSafety[iw, 0], x - 1, y + 1);
-					CBitboard.Add(ref bbKingSafety[iw, 0], x + 1, y + 1);
-					CBitboard.Add(ref bbKingSafety[iw, 0], x, y + 2);
-					CBitboard.Add(ref bbKingSafety[iw, 0], x - 1, y + 2);
-					CBitboard.Add(ref bbKingSafety[iw, 0], x + 1, y + 2);
-					CBitboard.Add(ref bbConnected[iw], x + 1, y);
-					CBitboard.Add(ref bbConnected[iw], x - 1, y);
-					CBitboard.Add(ref bbConnected[iw], x + 1, y + 1);
-					CBitboard.Add(ref bbConnected[iw], x - 1, y + 1);
-					CBitboard.Add(ref bbConnected[iw], x + 1, y - 1);
-					CBitboard.Add(ref bbConnected[iw], x - 1, y - 1);
+					int ib = (y << 3) | x;
+					CBitboard.Add(ref bbSupported[ib, 1], x - 1, y + 1);
+					CBitboard.Add(ref bbSupported[ib, 0], x - 1, y - 1);
+					CBitboard.Add(ref bbSupported[ib, 1], x + 1, y + 1);
+					CBitboard.Add(ref bbSupported[ib, 0], x + 1, y - 1);
+					CBitboard.Add(ref bbKingSafety[ib, 1], x, y - 1);
+					CBitboard.Add(ref bbKingSafety[ib, 1], x - 1, y - 1);
+					CBitboard.Add(ref bbKingSafety[ib, 1], x + 1, y - 1);
+					CBitboard.Add(ref bbKingSafety[ib, 1], x, y - 2);
+					CBitboard.Add(ref bbKingSafety[ib, 1], x - 1, y - 2);
+					CBitboard.Add(ref bbKingSafety[ib, 1], x + 1, y - 2);
+					CBitboard.Add(ref bbKingSafety[ib, 0], x, y + 1);
+					CBitboard.Add(ref bbKingSafety[ib, 0], x - 1, y + 1);
+					CBitboard.Add(ref bbKingSafety[ib, 0], x + 1, y + 1);
+					CBitboard.Add(ref bbKingSafety[ib, 0], x, y + 2);
+					CBitboard.Add(ref bbKingSafety[ib, 0], x - 1, y + 2);
+					CBitboard.Add(ref bbKingSafety[ib, 0], x + 1, y + 2);
+					CBitboard.Add(ref bbConnected[ib], x + 1, y);
+					CBitboard.Add(ref bbConnected[ib], x - 1, y);
+					CBitboard.Add(ref bbConnected[ib], x + 1, y + 1);
+					CBitboard.Add(ref bbConnected[ib], x - 1, y + 1);
+					CBitboard.Add(ref bbConnected[ib], x + 1, y - 1);
+					CBitboard.Add(ref bbConnected[ib], x - 1, y - 1);
 					CBitboard.Add(ref bbRank[y, 0], x, y);
 					CBitboard.Add(ref bbRank[y, 1], x, 7 - y);
 					for (int n = y - 1; n >= 0; n--)
 					{
-						CBitboard.Add(ref bbOutpost[iw, 1], x - 1, n);
-						CBitboard.Add(ref bbOutpost[iw, 1], x + 1, n);
+						CBitboard.Add(ref bbOutpost[ib, 1], x - 1, n);
+						CBitboard.Add(ref bbOutpost[ib, 1], x + 1, n);
 					}
 					for (int n = y + 1; n < 8; n++)
 					{
-						CBitboard.Add(ref bbOutpost[iw, 0], x - 1, n);
-						CBitboard.Add(ref bbOutpost[iw, 0], x + 1, n);
+						CBitboard.Add(ref bbOutpost[ib, 0], x - 1, n);
+						CBitboard.Add(ref bbOutpost[ib, 0], x + 1, n);
 					}
 					for (int n = 0; n < 8; n++)
 					{
 						if (n != y)
-							CBitboard.Add(ref bbDoubled[iw], x, n);
-						CBitboard.Add(ref bbIsolated[x], x + 1, n);
-						CBitboard.Add(ref bbIsolated[x], x - 1, n);
-						CBitboard.Add(ref bbAttackBishop[iw], x - n, y - n);
-						CBitboard.Add(ref bbAttackBishop[iw], x - n, y + n);
-						CBitboard.Add(ref bbAttackBishop[iw], x + n, y - n);
-						CBitboard.Add(ref bbAttackBishop[iw], x + n, y + n);
-						CBitboard.Add(ref bbAttackRook[iw], x - n, y);
-						CBitboard.Add(ref bbAttackRook[iw], x + n, y);
-						CBitboard.Add(ref bbAttackRook[iw], x, y - n);
-						CBitboard.Add(ref bbAttackRook[iw], x, y + n);
+							CBitboard.Add(ref bbDoubled[ib], x, n);
+						CBitboard.Add(ref bbIsolated[ib], x + 1, n);
+						CBitboard.Add(ref bbIsolated[ib], x - 1, n);
+						CBitboard.Add(ref bbAttackBishop[ib], x - n, y - n);
+						CBitboard.Add(ref bbAttackBishop[ib], x - n, y + n);
+						CBitboard.Add(ref bbAttackBishop[ib], x + n, y - n);
+						CBitboard.Add(ref bbAttackBishop[ib], x + n, y + n);
+						CBitboard.Add(ref bbAttackRook[ib], x - n, y);
+						CBitboard.Add(ref bbAttackRook[ib], x + n, y);
+						CBitboard.Add(ref bbAttackRook[ib], x, y - n);
+						CBitboard.Add(ref bbAttackRook[ib], x, y + n);
 					}
-					CBitboard.Add(ref bbAttackKing[iw], x, y + 1);
-					CBitboard.Add(ref bbAttackKing[iw], x, y - 1);
-					CBitboard.Add(ref bbAttackKing[iw], x - 1, y + 1);
-					CBitboard.Add(ref bbAttackKing[iw], x - 1, y - 1);
-					CBitboard.Add(ref bbAttackKing[iw], x + 1, y + 1);
-					CBitboard.Add(ref bbAttackKing[iw], x + 1, y - 1);
-					CBitboard.Add(ref bbAttackKing[iw], x + 1, y);
-					CBitboard.Add(ref bbAttackKing[iw], x - 1, y);
+					CBitboard.Add(ref bbAttackKing[ib], x, y + 1);
+					CBitboard.Add(ref bbAttackKing[ib], x, y - 1);
+					CBitboard.Add(ref bbAttackKing[ib], x - 1, y + 1);
+					CBitboard.Add(ref bbAttackKing[ib], x - 1, y - 1);
+					CBitboard.Add(ref bbAttackKing[ib], x + 1, y + 1);
+					CBitboard.Add(ref bbAttackKing[ib], x + 1, y - 1);
+					CBitboard.Add(ref bbAttackKing[ib], x + 1, y);
+					CBitboard.Add(ref bbAttackKing[ib], x - 1, y);
 					for (int n = y + 1; n < 8; n++)
-						CBitboard.Add(ref bbPassed[iw, 0], x, n);
+						CBitboard.Add(ref bbPassed[ib, 0], x, n);
 					for (int n = y + 2; n < 8; n++)
 					{
-						CBitboard.Add(ref bbPassed[iw, 0], x - 1, n);
-						CBitboard.Add(ref bbPassed[iw, 0], x + 1, n);
+						CBitboard.Add(ref bbPassed[ib, 0], x - 1, n);
+						CBitboard.Add(ref bbPassed[ib, 0], x + 1, n);
 					}
 					for (int n = y - 1; n >= 0; n--)
-						CBitboard.Add(ref bbPassed[iw, 1], x, n);
+						CBitboard.Add(ref bbPassed[ib, 1], x, n);
 					for (int n = y - 2; n >= 0; n--)
 					{
-						CBitboard.Add(ref bbPassed[iw, 1], x - 1, n);
-						CBitboard.Add(ref bbPassed[iw, 1], x + 1, n);
+						CBitboard.Add(ref bbPassed[ib, 1], x - 1, n);
+						CBitboard.Add(ref bbPassed[ib, 1], x + 1, n);
 					}
 					int scorePassedFile = x;
 					if (scorePassedFile > 3)
 						scorePassedFile = 7 - scorePassedFile;
-					bonPassed[iw, 0] = bonusPassedRank[y] - scorePassedFile * 10;
-					bonPassed[iw, 1] = bonusPassedRank[7 - y] - scorePassedFile * 10;
+					bonPassed[ib, 0] = bonusPassedRank[y] - scorePassedFile * 10;
+					bonPassed[ib, 1] = bonusPassedRank[7 - y] - scorePassedFile * 10;
 				}
 			FillArray(bonusMobilityMg[5], -64, 32, 8, 0);
 			FillArray(bonusMobilityEg[5], -64, 64, 8, 0);
@@ -356,7 +356,7 @@ namespace NSRapchess
 
 		public static int MgEgToScore(int mg, int eg)
 		{
-			return (mg * CChess.g_phase + eg * (32 - CChess.g_phase)) / 32;
+			return (mg * CEngine.g_phase + eg * (32 - CEngine.g_phase)) / 32;
 		}
 
 		public static bool IsPassed(Color usCol, int fr)

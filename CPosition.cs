@@ -12,6 +12,7 @@ namespace NSRapchess
 {
 	static class CPosition
 	{
+		public static int passant = -1;
 		public static Color usCol = Constants.colWhite;
 		public static Color enCol = Constants.colBlack;
 		public static Square usKing;
@@ -21,6 +22,18 @@ namespace NSRapchess
 		public static ulong usBitboard = 0;
 		public static ulong enBitboard = 0;
 		public static ulong emBitboard = 0;
+
+		public static string Passant
+		{
+			get
+			{
+				return CEngine.SquareToStr(passant);
+			}
+			set
+			{
+				passant = CEngine.StrToSquare(value);
+			}
+		}
 
 		public static void SetColor(Color c)
 		{

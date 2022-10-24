@@ -243,7 +243,7 @@ namespace NSRapchess
 				if (rank != Constants.piecePawn)
 					return false;
 				if (isPassing)
-					return (to == CChess.passant) && IsSquareAttackedFromTo(fr, to);
+					return (to == CPosition.passant) && IsSquareAttackedFromTo(fr, to);
 				if (CPosition.IsRank(fr, 7) && !isPromotion)
 					return false;
 				int del = wt ? -8 : 8;
@@ -259,7 +259,7 @@ namespace NSRapchess
 			}
 			if (rank == Constants.pieceKing)
 			{
-				int cr = CChess.castleRights >> (wt ? 0 : 2);
+				int cr = CEngine.castleRights >> (wt ? 0 : 2);
 				if ((move & Constants.moveflagCastleKing) > 0)
 				{
 					if (((cr & 1) > 0) && CPosition.IsSquareEmpty(fr + 1) && CPosition.IsSquareEmpty(fr + 2) && (!IsSquareAttacked(fr, CPosition.enCol)) && (!IsSquareAttacked(fr + 1, CPosition.enCol)) && (!IsSquareAttacked(fr + 2, CPosition.enCol)))
@@ -436,8 +436,8 @@ namespace NSRapchess
 		{
 			MList moves = new MList();
 			ulong paBitboard = 0;
-			if (CChess.passant > 0)
-				paBitboard = 1ul << CChess.passant;
+			if (CPosition.passant > 0)
+				paBitboard = 1ul << CPosition.passant;
 
 
 			ulong usbb = CPosition.bitBoard[Constants.piecePawn | CPosition.usCol];
@@ -448,7 +448,7 @@ namespace NSRapchess
 				while (bb > 0)
 				{
 					int to = CBitboard.Pop(ref bb);
-					int flag = to == CChess.passant ? Constants.moveflagPassing : 0;
+					int flag = to == CPosition.passant ? Constants.moveflagPassing : 0;
 					GenerateMovesPawn(moves, fr, to, flag);
 				}
 			}
@@ -512,8 +512,8 @@ namespace NSRapchess
 			MList moves = new MList();
 			bool wt = CPosition.IsWhiteTurn();
 			ulong paBitboard = 0;
-			if (CChess.passant > 0)
-				paBitboard = 1ul << CChess.passant;
+			if (CPosition.passant > 0)
+				paBitboard = 1ul << CPosition.passant;
 
 			ulong usbb = CPosition.bitBoard[Constants.piecePawn | CPosition.usCol];
 			while (usbb > 0)
@@ -523,7 +523,7 @@ namespace NSRapchess
 				while (bb > 0)
 				{
 					int to = CBitboard.Pop(ref bb);
-					int flag = to == CChess.passant ? Constants.moveflagPassing : 0;
+					int flag = to == CPosition.passant ? Constants.moveflagPassing : 0;
 					GenerateMovesPawn(moves, fr, to, flag);
 				}
 
@@ -577,7 +577,7 @@ namespace NSRapchess
 					int to = CBitboard.Pop(ref bb);
 					AddMove(moves, fr, to, 0);
 				}
-				int cr = CChess.castleRights >> (wt ? 0 : 2);
+				int cr = CEngine.castleRights >> (wt ? 0 : 2);
 				if ((cr & 1) > 0)
 					if ((((0b11ul << (wt ? 61 : 5)) | CPosition.emBitboard) == CPosition.emBitboard) && !IsSquareAttacked(fr, CPosition.enCol) && !IsSquareAttacked(fr + 1, CPosition.enCol) && !IsSquareAttacked(fr + 2, CPosition.enCol))
 						AddMove(moves, fr, fr + 2, Constants.moveflagCastleKing);

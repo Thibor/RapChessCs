@@ -19,7 +19,7 @@ namespace NSRapchess
 		readonly Stopwatch timer = new Stopwatch();
 		List<string> list;
 		readonly CRapLog log = new CRapLog();
-		List<string> fenList = new List<string>();
+		readonly List<string> fenList = new List<string>();
 
 		string GetTimeElapsed()
 		{
@@ -28,17 +28,19 @@ namespace NSRapchess
 			return dt.ToString("HH:mm:ss.fff ");
 		}
 
-		void WriteLine(string msg)
-		{
-			Console.WriteLine(msg);
-			log.Add(msg);
-		}
-
 		void Sort()
 		{
 			fenList.Sort();
-			fenList.Insert(0,modeGo);
-			fenList.Insert(0,"sort");
+			string last = String.Empty;
+			for (int n = fenList.Count - 1; n >= 0; n--)
+			{
+				string cur = fenList[n];
+				if (cur == last)
+					fenList.RemoveAt(n);
+				last = cur;
+			}
+			fenList.Insert(0, modeGo);
+			fenList.Insert(0, "sort");
 			File.WriteAllLines("bench.txt", fenList);
 		}
 
@@ -49,18 +51,31 @@ namespace NSRapchess
 			nodes = 0;
 			fenList.Clear();
 			timer.Restart();
-			WriteLine("bench start");
+			Console.WriteLine("bench start");
 			Next();
+		}
+
+		void History()
+		{
+			List<string> list = log.List();
+			for (int n = 2; n >= 0; n--)
+				if (n < list.Count)
+					Console.WriteLine(list[n]);
 		}
 
 		void BenchFinish()
 		{
+			if (!start)
+				return;
 			start = false;
 			timer.Stop();
 			double ms = timer.Elapsed.TotalMilliseconds;
-			double nps = ms > 0 ? (nodes * 1000.0)/ ms : 0;
-			WriteLine($"time {GetTimeElapsed()} nodes {nodes:N0} nps {nps:N0}");
-			WriteLine("bench end");
+			double nps = ms > 0 ? (nodes * 1000.0) / ms : 0;
+			string msg = $"time {GetTimeElapsed()} nodes {nodes:N0} nps {nps:N0}";
+			log.Add(msg);
+			if (!modeScore)
+				History();
+			Console.WriteLine("bench end");
 			if (modeSort)
 				Sort();
 		}
@@ -79,7 +94,11 @@ namespace NSRapchess
 				uci2.SetMsg(order);
 				switch (uci2.command)
 				{
+					case "//":
+						continue;
 					case "finish":
+						if (fenList.Count == 0)
+							CScore.Trace();
 						BenchFinish();
 						return;
 					case "fen":
@@ -100,21 +119,21 @@ namespace NSRapchess
 						continue;
 				}
 				if (modeFen)
-					Program.chess.SetFen(order);
+					Program.engine.SetFen(order);
 				else
 				{
-					Program.chess.SetFen();
-					Program.chess.MakeMoves(order);
+					Program.engine.SetFen();
+					Program.engine.MakeMoves(order);
 				}
+				string fen = Program.engine.GetFen();
+				fenList.Add(fen);
 				if (modeScore)
 					CScore.Trace();
 				else
 				{
-					string fen = Program.chess.GetFen();
-					fenList.Add(fen);
-					log.Add(fen);
+					CTranspositionTable.Clear();
 					Program.uci.SetMsg(modeGo);
-					Program.chess.UciGo();
+					Program.engine.UciGo();
 					break;
 				}
 			}

@@ -38,5 +38,13 @@ namespace RapLog
 			File.WriteAllLines(path, list);
 		}
 
+		public List<string> List()
+		{
+			List<string> list = new List<string>();
+			if (File.Exists(path))
+				list = File.ReadAllLines(path).ToList();
+			return list;
+		}
+
 	}
 }
