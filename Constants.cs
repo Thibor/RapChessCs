@@ -39,5 +39,8 @@ namespace NSRapchess
 		internal const Bitboard bbDark = 0x55aa55aa55aa55aaul;
 		internal const int MAX_MOVES = 200;
 		internal const int MAX_PLY = 100;
+		internal const int CHECKMATE_MAX = 0x7ff0;
+		internal const int CHECKMATE_NEAR = 0x7000;
+		internal const int CHECKMATE_INFINITY = 0x7fff;
 	}
 }

@@ -39,7 +39,7 @@ namespace NSRapchess
 
 	internal class CScore
 	{
-		readonly static Bitboard[,] bbRank = new ulong[8, 2];
+		readonly public static Bitboard[,] bbRank = new ulong[8, 2];
 		readonly static Bitboard[,] bbOutpost = new ulong[64, 2];
 		readonly static Bitboard[,] bbSupported = new ulong[64, 2];
 		readonly static Bitboard[] bbIsolated = new ulong[64];
@@ -50,14 +50,19 @@ namespace NSRapchess
 		readonly static Bitboard[] bbAttackBishop = new ulong[64];
 		readonly static Bitboard[] bbAttackRook = new ulong[64];
 		readonly static Bitboard[] bbAttackKing = new ulong[64];
+		public static double[] arrCenter = new double[64];
 		public static int[,] arrDistance = new int[64, 64];
-		readonly static int[,] bonPassed = new int[64, 2];
-		readonly static int[] bonusPassedRank = new int[8] { 0, 10, 17, 15, 62, 168, 276, 0 };
+		readonly static int[] bonusPassedRankMg = new int[8] { 0, 10, 17, 15, 62, 168, 276, 0 };
+		readonly static int[] bonusPassedRankEg = new int[8] { 0, 28, 33, 41, 72, 177, 260, 0 };
+		readonly static int[] bonusPassedFileMg = new int[8] { -33, -22, -11, 0, 0, -11, -22, -33 };
+		readonly static int[] bonusPassedFileEg = new int[8] { -24, -16, -8, 0, 0, -8, -16, -24 };
 		readonly static int[] bonusPawnRank = new int[8] { 0, 7, 8, 12, 29, 48, 86, 0 };
-		readonly static int[,] bonusCenter = new int[8, 2] { { 0, 0 }, { 4, 2 }, { 8, 8 }, { 1, 2 }, { -4, 0 }, { -8, 8 }, { -16, 16 }, { 0, 0 } };
+		readonly static int[,] bonusCenter = new int[8, 2] { { 0, 0 }, { 8, 0 }, { 8, 8 }, { 1, 2 }, { -4, 0 }, { -8, 8 }, { -16, 16 }, { 0, 0 } };
 		readonly static int[,] bonusMaterial = new int[8, 2] { { 0, 0 }, { 171, 240 }, { 764, 848 }, { 826, 891 }, { 1282, 1373 }, { 2526, 2646 }, { 0, 0 }, { 0, 0 } };
+		readonly static int[,] bonPawnConnected = new int[64, 2];
 		public static int[,] bonMaterialMg = new int[16, 64];
 		public static int[,] bonMaterialEg = new int[16, 64];
+		public static int[,,] bonMaterialPhase = new int[16, 64, 33];
 		public static int[][] bonusMobilityMg = new int[8][] { new int[] { }, new int[] { },new int[9]{-62,-53,-12,-4,3,13,22,28,33},
 			new int[14]{ -48, -20, 16, 26, 38, 51, 55, 63, 63, 68, 81, 81, 91, 98},
 	new int[15]{ -60, -20, 2, 3, 3, 11, 22, 31, 40, 40, 41, 48, 57, 57, 62},
@@ -84,83 +89,68 @@ namespace NSRapchess
 			for (int y = 0; y < 8; y++)
 				for (int x = 0; x < 8; x++)
 				{
-					int ib = (y << 3) | x;
-					CBitboard.Add(ref bbSupported[ib, 1], x - 1, y + 1);
-					CBitboard.Add(ref bbSupported[ib, 0], x - 1, y - 1);
-					CBitboard.Add(ref bbSupported[ib, 1], x + 1, y + 1);
-					CBitboard.Add(ref bbSupported[ib, 0], x + 1, y - 1);
-					CBitboard.Add(ref bbKingSafety[ib, 1], x, y - 1);
-					CBitboard.Add(ref bbKingSafety[ib, 1], x - 1, y - 1);
-					CBitboard.Add(ref bbKingSafety[ib, 1], x + 1, y - 1);
-					CBitboard.Add(ref bbKingSafety[ib, 1], x, y - 2);
-					CBitboard.Add(ref bbKingSafety[ib, 1], x - 1, y - 2);
-					CBitboard.Add(ref bbKingSafety[ib, 1], x + 1, y - 2);
-					CBitboard.Add(ref bbKingSafety[ib, 0], x, y + 1);
-					CBitboard.Add(ref bbKingSafety[ib, 0], x - 1, y + 1);
-					CBitboard.Add(ref bbKingSafety[ib, 0], x + 1, y + 1);
-					CBitboard.Add(ref bbKingSafety[ib, 0], x, y + 2);
-					CBitboard.Add(ref bbKingSafety[ib, 0], x - 1, y + 2);
-					CBitboard.Add(ref bbKingSafety[ib, 0], x + 1, y + 2);
-					CBitboard.Add(ref bbConnected[ib], x + 1, y);
-					CBitboard.Add(ref bbConnected[ib], x - 1, y);
-					CBitboard.Add(ref bbConnected[ib], x + 1, y + 1);
-					CBitboard.Add(ref bbConnected[ib], x - 1, y + 1);
-					CBitboard.Add(ref bbConnected[ib], x + 1, y - 1);
-					CBitboard.Add(ref bbConnected[ib], x - 1, y - 1);
+					int iw = (y << 3) | x;
+					CBitboard.Add(ref bbSupported[iw, 1], x + 1, y + 1);
+					CBitboard.Add(ref bbSupported[iw, 1], x - 1, y + 1);
+					CBitboard.Add(ref bbSupported[iw, 0], x + 1, y - 1);
+					CBitboard.Add(ref bbSupported[iw, 0], x - 1, y - 1);
+					CBitboard.Add(ref bbKingSafety[iw, 1], x, y - 1);
+					CBitboard.Add(ref bbKingSafety[iw, 0], x, y + 1);
+					CBitboard.Add(ref bbConnected[iw], x + 1, y);
+					CBitboard.Add(ref bbConnected[iw], x - 1, y);
+					CBitboard.Add(ref bbConnected[iw], x + 1, y + 1);
+					CBitboard.Add(ref bbConnected[iw], x - 1, y + 1);
+					CBitboard.Add(ref bbConnected[iw], x + 1, y - 1);
+					CBitboard.Add(ref bbConnected[iw], x - 1, y - 1);
 					CBitboard.Add(ref bbRank[y, 0], x, y);
 					CBitboard.Add(ref bbRank[y, 1], x, 7 - y);
 					for (int n = y - 1; n >= 0; n--)
 					{
-						CBitboard.Add(ref bbOutpost[ib, 1], x - 1, n);
-						CBitboard.Add(ref bbOutpost[ib, 1], x + 1, n);
+						CBitboard.Add(ref bbOutpost[iw, 1], x - 1, n);
+						CBitboard.Add(ref bbOutpost[iw, 1], x + 1, n);
 					}
 					for (int n = y + 1; n < 8; n++)
 					{
-						CBitboard.Add(ref bbOutpost[ib, 0], x - 1, n);
-						CBitboard.Add(ref bbOutpost[ib, 0], x + 1, n);
+						CBitboard.Add(ref bbOutpost[iw, 0], x - 1, n);
+						CBitboard.Add(ref bbOutpost[iw, 0], x + 1, n);
 					}
 					for (int n = 0; n < 8; n++)
 					{
 						if (n != y)
-							CBitboard.Add(ref bbDoubled[ib], x, n);
-						CBitboard.Add(ref bbIsolated[ib], x + 1, n);
-						CBitboard.Add(ref bbIsolated[ib], x - 1, n);
-						CBitboard.Add(ref bbAttackBishop[ib], x - n, y - n);
-						CBitboard.Add(ref bbAttackBishop[ib], x - n, y + n);
-						CBitboard.Add(ref bbAttackBishop[ib], x + n, y - n);
-						CBitboard.Add(ref bbAttackBishop[ib], x + n, y + n);
-						CBitboard.Add(ref bbAttackRook[ib], x - n, y);
-						CBitboard.Add(ref bbAttackRook[ib], x + n, y);
-						CBitboard.Add(ref bbAttackRook[ib], x, y - n);
-						CBitboard.Add(ref bbAttackRook[ib], x, y + n);
+							CBitboard.Add(ref bbDoubled[iw], x, n);
+						CBitboard.Add(ref bbIsolated[iw], x + 1, n);
+						CBitboard.Add(ref bbIsolated[iw], x - 1, n);
+						CBitboard.Add(ref bbAttackBishop[iw], x - n, y - n);
+						CBitboard.Add(ref bbAttackBishop[iw], x - n, y + n);
+						CBitboard.Add(ref bbAttackBishop[iw], x + n, y - n);
+						CBitboard.Add(ref bbAttackBishop[iw], x + n, y + n);
+						CBitboard.Add(ref bbAttackRook[iw], x - n, y);
+						CBitboard.Add(ref bbAttackRook[iw], x + n, y);
+						CBitboard.Add(ref bbAttackRook[iw], x, y - n);
+						CBitboard.Add(ref bbAttackRook[iw], x, y + n);
 					}
-					CBitboard.Add(ref bbAttackKing[ib], x, y + 1);
-					CBitboard.Add(ref bbAttackKing[ib], x, y - 1);
-					CBitboard.Add(ref bbAttackKing[ib], x - 1, y + 1);
-					CBitboard.Add(ref bbAttackKing[ib], x - 1, y - 1);
-					CBitboard.Add(ref bbAttackKing[ib], x + 1, y + 1);
-					CBitboard.Add(ref bbAttackKing[ib], x + 1, y - 1);
-					CBitboard.Add(ref bbAttackKing[ib], x + 1, y);
-					CBitboard.Add(ref bbAttackKing[ib], x - 1, y);
+					CBitboard.Add(ref bbAttackKing[iw], x, y + 1);
+					CBitboard.Add(ref bbAttackKing[iw], x, y - 1);
+					CBitboard.Add(ref bbAttackKing[iw], x - 1, y + 1);
+					CBitboard.Add(ref bbAttackKing[iw], x - 1, y - 1);
+					CBitboard.Add(ref bbAttackKing[iw], x + 1, y + 1);
+					CBitboard.Add(ref bbAttackKing[iw], x + 1, y - 1);
+					CBitboard.Add(ref bbAttackKing[iw], x + 1, y);
+					CBitboard.Add(ref bbAttackKing[iw], x - 1, y);
 					for (int n = y + 1; n < 8; n++)
-						CBitboard.Add(ref bbPassed[ib, 0], x, n);
+						CBitboard.Add(ref bbPassed[iw, 0], x, n);
 					for (int n = y + 2; n < 8; n++)
 					{
-						CBitboard.Add(ref bbPassed[ib, 0], x - 1, n);
-						CBitboard.Add(ref bbPassed[ib, 0], x + 1, n);
+						CBitboard.Add(ref bbPassed[iw, 0], x - 1, n);
+						CBitboard.Add(ref bbPassed[iw, 0], x + 1, n);
 					}
 					for (int n = y - 1; n >= 0; n--)
-						CBitboard.Add(ref bbPassed[ib, 1], x, n);
+						CBitboard.Add(ref bbPassed[iw, 1], x, n);
 					for (int n = y - 2; n >= 0; n--)
 					{
-						CBitboard.Add(ref bbPassed[ib, 1], x - 1, n);
-						CBitboard.Add(ref bbPassed[ib, 1], x + 1, n);
+						CBitboard.Add(ref bbPassed[iw, 1], x - 1, n);
+						CBitboard.Add(ref bbPassed[iw, 1], x + 1, n);
 					}
-					int scorePassedFile = x;
-					if (scorePassedFile > 3)
-						scorePassedFile = 7 - scorePassedFile;
-					bonPassed[ib, 0] = bonusPassedRank[y] - scorePassedFile * 10;
-					bonPassed[ib, 1] = bonusPassedRank[7 - y] - scorePassedFile * 10;
 				}
 			FillArray(bonusMobilityMg[5], -64, 32, 8, 0);
 			FillArray(bonusMobilityEg[5], -64, 64, 8, 0);
@@ -354,28 +344,28 @@ namespace NSRapchess
 			return count;
 		}
 
-		public static int MgEgToScore(int mg, int eg)
+		public static int MgEgToScore(int mg, int eg, int phase)
 		{
-			return (mg * CEngine.g_phase + eg * (32 - CEngine.g_phase)) / 32;
+			return (mg * phase + eg * (32 - phase)) / 32;
 		}
 
-		public static bool IsPassed(Color usCol, int fr)
+		public static bool IsPassed(int piece, int fr)
 		{
-			return (CPosition.bitBoard[(usCol ^ Constants.maskColor) | Constants.piecePawn] & bbPassed[fr, usCol >> 3]) == 0;
+			return (CPosition.bitBoard[piece ^ Constants.maskColor] & bbPassed[fr, piece >> 3]) == 0;
 		}
 
 		public static void ScorePawn(RScore rs, ref int mg, ref int eg)
 		{
-			int score = 0;
 			int piece = Constants.piecePawn | rs.usCol;
 			Bitboard usbb = CPosition.bitBoard[Constants.piecePawn | rs.usCol];
 			while (usbb > 0)
 			{
 				int fr = CBitboard.Pop(ref usbb);
-				mg += bonMaterialMg[piece, fr];
-				eg += bonMaterialEg[piece, fr];
-				if ((CPosition.bitBoard[piece] & bbConnected[fr]) > 0)
-					eg += 8;
+				if ((CPosition.bitBoard[piece] & bbConnected[fr]) == 0)
+				{
+					mg -= bonPawnConnected[fr, rs.w];
+					eg -= bonPawnConnected[fr,rs.w];
+				}
 				if ((CPosition.bitBoard[piece] & bbDoubled[fr]) > 0)
 				{
 					mg -= 16;
@@ -386,12 +376,17 @@ namespace NSRapchess
 					mg -= 4;
 					eg -= 8;
 				}
-				if (IsPassed(rs.usCol, fr))
-					score += bonPassed[fr, rs.w];
-				score -= 4 * arrDistance[rs.usKingPosition, fr];
+				if (IsPassed(piece, fr))
+				{
+					mg += bonMaterialMg[rs.usCol, fr];
+					eg += bonMaterialEg[rs.usCol, fr] - (arrDistance[rs.usKingPosition, fr] << 3);
+				}
+				else
+				{
+					mg += bonMaterialMg[piece, fr];
+					eg += bonMaterialEg[piece, fr] - (arrDistance[rs.usKingPosition, fr] << 2);
+				}
 			}
-			mg += score;
-			eg += score;
 		}
 
 
@@ -431,7 +426,7 @@ namespace NSRapchess
 				int count = CountMovesBishop(rs, fr);
 				mg += bonusMobilityMg[Constants.pieceBishop][count];
 				eg += bonusMobilityEg[Constants.pieceBishop][count];
-				if (((CPosition.bitBoard[rs.enCol | Constants.pieceQueen] | CPosition.bitBoard[rs.enCol | Constants.pieceKing]) & bbAttackBishop[fr]) > 0)score += 8;
+				if (((CPosition.bitBoard[rs.enCol | Constants.pieceQueen] | CPosition.bitBoard[rs.enCol | Constants.pieceKing]) & bbAttackBishop[fr]) > 0) score += 8;
 				if (((CPosition.bitBoard[rs.enCol | Constants.piecePawn] & bbOutpost[fr, rs.w]) == 0) && ((CPosition.bitBoard[rs.usCol | Constants.piecePawn] & bbSupported[fr, rs.w]) > 0))
 				{
 					mg += 33;
@@ -455,7 +450,7 @@ namespace NSRapchess
 				int count = CountMovesRook(rs, fr);
 				mg += bonusMobilityMg[Constants.pieceRook][count];
 				eg += bonusMobilityEg[Constants.pieceRook][count];
-				if (((CPosition.bitBoard[rs.enCol | Constants.pieceQueen]|CPosition.bitBoard[rs.enCol | Constants.pieceKing]) & bbAttackRook[fr]) > 0)score += 8;
+				if (((CPosition.bitBoard[rs.enCol | Constants.pieceQueen] | CPosition.bitBoard[rs.enCol | Constants.pieceKing]) & bbAttackRook[fr]) > 0) score += 8;
 				if ((CPosition.bitBoard[rs.usCol | Constants.piecePawn] & bbDoubled[fr]) == 0)
 					if ((CPosition.bitBoard[rs.enCol | Constants.piecePawn] & bbDoubled[fr]) == 0)
 						score += 16;
@@ -486,7 +481,6 @@ namespace NSRapchess
 
 		public static void ScoreKing(RScore rs, ref int mg, ref int eg)
 		{
-			int score = 0;
 			int piece = Constants.pieceKing | rs.usCol;
 			Bitboard usPawns = CPosition.bitBoard[rs.usCol | Constants.piecePawn];
 			Bitboard enPawns = CPosition.bitBoard[rs.enCol | Constants.piecePawn];
@@ -495,10 +489,13 @@ namespace NSRapchess
 				mg += 8;
 				eg += 16;
 			}
-			int kingSafety = CBitboard.Count(CPosition.bitBoard[rs.usCol | Constants.piecePawn] & bbKingSafety[rs.usKingPosition, rs.w]);
-			score += kingSafety * 16;
-			mg += score + bonMaterialMg[piece, rs.usKingPosition];
-			eg += score + bonMaterialEg[piece, rs.usKingPosition];
+			if((CPosition.bitBoard[rs.usCol | Constants.piecePawn] & bbKingSafety[rs.usKingPosition, rs.w])>0)
+			{
+				mg += 16;
+				eg += 8;
+			}
+			mg += bonMaterialMg[piece, rs.usKingPosition];
+			eg += bonMaterialEg[piece, rs.usKingPosition];
 		}
 
 		public static int Score(RScore rs)
@@ -511,7 +508,7 @@ namespace NSRapchess
 			ScoreRook(rs, ref mg, ref eg);
 			ScoreQueen(rs, ref mg, ref eg);
 			ScoreKing(rs, ref mg, ref eg);
-			return MgEgToScore(mg, eg);
+			return MgEgToScore(mg, eg, CEngine.phase);
 		}
 		public static int Score()
 		{
@@ -535,7 +532,8 @@ namespace NSRapchess
 				for (int x = 0; x < 8; x++)
 				{
 					int ib = (y << 3) | x;
-					double center = 7.0 - (Math.Abs(x - 3.5) + Math.Abs(y - 3.5)) / 7.0;
+					double center = 1.0 - (Math.Abs(x - 3.5) + Math.Abs(y - 3.5)) / 7.0;
+					arrCenter[ib] = center;
 					for (int r = 1; r < 7; r++)
 					{
 						bonMaterialMg[r, ib] = bonusMaterial[r, 0] + Convert.ToInt32(bonusCenter[r, 0] * center);
@@ -546,6 +544,7 @@ namespace NSRapchess
 						{
 							bonMaterialMg[r, ib] += bonusPawnRank[y];
 							bonMaterialEg[r, ib] += bonusPawnRank[y];
+							bonPawnConnected[ib, 0] = bonusPawnRank[y];
 						}
 						if (r == Constants.pieceKnight)
 							if (y == 0)
@@ -558,18 +557,25 @@ namespace NSRapchess
 								bonMaterialMg[r, ib] -= 8;
 						}
 					}
+					bonMaterialMg[0, ib] = bonusMaterial[1, 0] + bonusPassedRankMg[y] + bonusPassedFileMg[x];
+					bonMaterialEg[0, ib] = bonusMaterial[1, 1] + bonusPassedRankEg[y] + bonusPassedFileEg[x];
 				}
 			for (int y = 0; y < 8; y++)
 				for (int x = 0; x < 8; x++)
 				{
 					int iw = (y << 3) | x;
 					int ib = ((7 - y) << 3) | x;
-					for (int r = 1; r < 7; r++)
+					for (int r = 0; r < 7; r++)
 					{
 						bonMaterialMg[8 + r, iw] = bonMaterialMg[r, ib];
 						bonMaterialEg[8 + r, iw] = bonMaterialEg[r, ib];
 					}
+					bonPawnConnected[iw, 1] = bonPawnConnected[ib,0];
 				}
+			for (int r = 0; r < 16; r++)
+				for (int f = 0; f < 64; f++)
+					for (int p = 0; p < 33; p++)
+						bonMaterialPhase[r, f, p] = MgEgToScore(bonMaterialMg[r, f], bonMaterialEg[r, f], p);
 		}
 
 		static void ShowResult(string title, int wMg, int bMg, int wEg, int bEg)

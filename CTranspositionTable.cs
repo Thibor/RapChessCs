@@ -15,7 +15,7 @@ namespace NSRapchess
 		invalid,
 		alpha,
 		beta,
-		score
+		exact
 	}
 
 	public struct CRec
@@ -121,7 +121,7 @@ namespace NSRapchess
 			for (int n = 0; n < clusterSize; n++)
 			{
 				CRec rec = table[iStart + n];
-				if ((rec.hash == hash) && (rec.type == RecType.score))
+				if ((rec.hash == hash) && (rec.type == RecType.exact))
 				{
 					move = rec.move;
 					return;

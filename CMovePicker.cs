@@ -113,27 +113,19 @@ namespace NSRapchess
 			int fr = move & 0x3f;
 			int to = (move >> 6) & 0x3f;
 			int pr = (move >> 12) & 7;
+			int phase = CEngine.phase;
 			int pieceFr = CPosition.board[fr];
 			int pieceTo = CPosition.board[to];
-			int scoreMg = -CScore.bonMaterialMg[pieceFr, fr];
-			int scoreEg = -CScore.bonMaterialEg[pieceFr, fr];
+			int score = -CScore.bonMaterialPhase[pieceFr, fr, phase];
 			if (pr == 0)
-			{
-				scoreMg += CScore.bonMaterialMg[pieceFr, to];
-				scoreEg += CScore.bonMaterialEg[pieceFr, to];
-			}
+				score += CScore.bonMaterialPhase[pieceFr, to, phase];
 			else
-			{
-				scoreMg += CScore.bonMaterialMg[CPosition.usCol | pr, to];
-				scoreEg += CScore.bonMaterialEg[CPosition.usCol | pr, to];
-			}
+				score += CScore.bonMaterialPhase[CPosition.usCol | pr, to, phase];
 			if (pieceTo > 0)
-			{
-				scoreMg += CScore.bonMaterialMg[pieceTo, to];
-				scoreEg += CScore.bonMaterialEg[pieceTo, to];
-			}
-			return CScore.MgEgToScore(scoreMg, scoreEg);
+				score += CScore.bonMaterialPhase[pieceTo, to, phase];
+			return score;
 		}
+
 
 	}
 }

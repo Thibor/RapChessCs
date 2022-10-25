@@ -13,6 +13,7 @@ namespace NSRapchess
 	static class CPosition
 	{
 		public static int passant = -1;
+		public static ushort halfMove = 0;
 		public static Color usCol = Constants.colWhite;
 		public static Color enCol = Constants.colBlack;
 		public static Square usKing;
