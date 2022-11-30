@@ -10,6 +10,13 @@ using Score = System.Int32;
 namespace NSRapchess
 {
 
+	public enum NodeType : byte
+	{
+		Root,
+		Pv,
+		NonPv
+	}
+
 	public struct MoveStack
 	{
 		internal Move move;

@@ -41,7 +41,7 @@ namespace NSRapchess
 
 	public class CRecList
 	{
-		internal readonly CRec[] table = new CRec[CTranspositionTable.clusterSize+2];
+		internal readonly CRec[] table = new CRec[CTranspositionTable.clusterSize + 2];
 		internal int count = 0;
 
 		public void Add(CRec rec)
@@ -88,7 +88,7 @@ namespace NSRapchess
 				length <<= 1;
 			table = new CRec[length--];
 			hashMask = (ulong)(length & ~clusterMask);
-			used = 0;
+			used=0;
 		}
 
 		public static void Clear()
@@ -102,7 +102,7 @@ namespace NSRapchess
 			return (int)(used * 1000ul / (ulong)table.Length);
 		}
 
-		public static MList GetMoves(Hash hash)
+		/*public static MList GetMoves(Hash hash)
 		{
 			MList moves = new MList();
 			int index = (int)(hash & hashMask);
@@ -110,12 +110,15 @@ namespace NSRapchess
 			{
 				CRec rec = table[index + n];
 				if ((rec.hash == hash) && (rec.move != 0))
+				{
 					moves.Add(rec.move);
+					break;
+				}
 			}
 			return moves;
-		}
+		}*/
 
-		public static void GetRecScore(ulong hash, out Move move)
+		public static void GetRecExact(ulong hash, out Move move)
 		{
 			int iStart = (int)(hash & hashMask);
 			for (int n = 0; n < clusterSize; n++)
@@ -131,16 +134,22 @@ namespace NSRapchess
 			move = 0;
 		}
 
-		public static void GetRec(ulong hash, int depth, out CRec rec)
+		public static void GetRec(ulong hash, int halfMove, int depth, out CRec rec)
 		{
 			int iStart = (int)(hash & hashMask);
 			for (int n = 0; n < clusterSize; n++)
 			{
 				rec = table[iStart + n];
-				if (rec.depth < depth)
-					break;
-				else if (rec.hash == hash)
+				//if ((rec.hash == hash)&&(rec.halfMove+rec.depth>=halfMove+depth))
+				//if ((rec.hash == hash) && (rec.halfMove >= halfMove))
+				//if ((rec.hash == hash) && (rec.depth >= depth))
+				if ((rec.hash == hash) && (rec.halfMove >= halfMove) && (rec.depth >= depth))
 					return;
+				/*if ((rec.depth < depth) || (rec.halfMove < halfMove))
+					break;
+				else */
+				/*if (rec.hash == hash)
+					return;*/
 			}
 			rec = empty;
 		}
@@ -151,7 +160,7 @@ namespace NSRapchess
 			for (int n = 0; n < clusterSize; n++)
 			{
 				rec = table[iStart + n];
-				if ((rec.hash == hash) || (rec.type == RecType.invalid))
+				if ((rec.hash == hash)||(rec.type==RecType.invalid))
 					return;
 			}
 			rec = empty;
@@ -160,11 +169,35 @@ namespace NSRapchess
 		public static void SetRec(CRec rec)
 		{
 			int iStart = (int)(rec.hash & hashMask);
-			if (table[iStart + clusterSize - 1].type == RecType.invalid)
+			ref CRec rep = ref table[iStart];
+			for (int n = 0; n < clusterSize; n++)
+			{
+				ref CRec cur = ref table[iStart + n];
+				if (cur.type == RecType.invalid)
+				{
+					used++;
+					cur = rec;
+					return;
+				}
+				if (cur.hash == rec.hash)
+				{
+					if (rec.move == 0)
+						rec.move = cur.move;
+					cur = rec;
+					return;
+				}
+				int c1 = rep.halfMove < rec.halfMove ? 2 : 0;
+				int c2 = (cur.halfMove == rec.halfMove) || (cur.type == RecType.exact) ? -2 : 0;
+				int c3 = cur.depth < rec.depth ? 1 : 0;
+				if (c1 + c2 + c3 > 0)
+					rep = cur;
+			}
+			rep = rec;
+			/*if (table[iStart + clusterSize - 1].type == RecType.invalid)
 				used++;
 			for (int i = clusterSize - 1; i > 0; i--)
 				table[iStart + i] = table[iStart + i - 1];
-			table[iStart] = rec;
+			table[iStart] = rec;*/
 		}
 
 	}

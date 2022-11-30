@@ -14,6 +14,7 @@ namespace NSRapchess
 
 	internal static class Constants
 	{
+		internal const int shiftDepth = 0;//6
 		internal const int piecePawn = 0x01;
 		internal const int pieceKnight = 0x02;
 		internal const int pieceBishop = 0x03;
@@ -29,14 +30,16 @@ namespace NSRapchess
 		internal const int moveflagPassing = 0x02 << 16;
 		internal const int moveflagCastleKing = 0x04 << 16;
 		internal const int moveflagCastleQueen = 0x08 << 16;
+		internal const int maskCastle = moveflagCastleKing | moveflagCastleQueen;
 		internal const int moveflagPromoteQueen = pieceQueen << 12;
 		internal const int moveflagPromoteRook = pieceRook << 12;
 		internal const int moveflagPromoteBishop = pieceBishop << 12;
 		internal const int moveflagPromoteKnight = pieceKnight << 12;
 		internal const int maskPromotion = moveflagPromoteQueen | moveflagPromoteRook | moveflagPromoteBishop | moveflagPromoteKnight;
+		internal const int maskSpecial = maskCastle | maskPromotion;
 		internal const Bitboard bbPromotion = 0xff000000000000fful;
 		internal const Bitboard bbLight = 0xaa55aa55aa55aa55ul;
-		internal const Bitboard bbDark = 0x55aa55aa55aa55aaul;
+		internal const Bitboard bbDark  = 0x55aa55aa55aa55aaul;
 		internal const int MAX_MOVES = 200;
 		internal const int MAX_PLY = 100;
 		internal const int CHECKMATE_MAX = 0x7ff0;

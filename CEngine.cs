@@ -24,10 +24,9 @@ namespace NSRapchess
 		int inTime = 0;
 		int inDepth = 0;
 		ulong inNodes = 0;
+		MList inMoves = null;
 		public static int castleRights = 0xf;
 		ulong hash = 0;
-		public byte move50 = 0;
-		public static int phase = 32;
 		ulong nodeCur = 0;
 		int timeOut = 0;
 		int depthOut = 0;
@@ -44,7 +43,7 @@ namespace NSRapchess
 		public static MList moveList = new MList();
 		public static List<int> bstMoves = new List<int>();
 		public Stopwatch stopwatch = Stopwatch.StartNew();
-		private static readonly Random random = new Random(1);
+		private static readonly Random rnd = new Random(1);
 		public CSynStop synStop = new CSynStop();
 		public static bool optMatePruning = true;
 		public static bool optNullPruning = true;
@@ -69,10 +68,7 @@ namespace NSRapchess
 
 		public CEngine()
 		{
-			CTranspositionTable.Clear();
 			hash = RandomUInt64();
-			for (int n = 0; n < undoStack.Length; n++)
-				undoStack[n] = new CUndo();
 			for (int n = 0; n < 64; n++)
 			{
 				CPosition.board[n] = 0;
@@ -116,7 +112,7 @@ namespace NSRapchess
 			if (String.IsNullOrEmpty(fen))
 				fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 			synStop.SetStop(false);
-			phase = 0;
+			CPosition.phase = 0;
 			for (int n = 0; n < 64; n++)
 				CPosition.board[n] = Constants.colEmpty;
 			for (int n = 0; n < 16; n++)
@@ -137,7 +133,7 @@ namespace NSRapchess
 					x += Int32.Parse(c.ToString());
 				else
 				{
-					phase++;
+					CPosition.phase++;
 					bool isWhite = Char.IsUpper(c);
 					int piece = isWhite ? Constants.colWhite : Constants.colBlack;
 					int index = (y << 3) | x;
@@ -179,9 +175,9 @@ namespace NSRapchess
 			if (chunks[2].IndexOf('q') != -1)
 				castleRights |= 8;
 			CPosition.Passant = chunks.Length < 4 ? "-" : chunks[3];
-			move50 = chunks.Length < 5 ? (byte)0 : byte.Parse(chunks[4]);
+			CPosition.move50 = chunks.Length < 5 ? (byte)0 : byte.Parse(chunks[4]);
 			MoveNumber = chunks.Length < 6 ? (ushort)1 : ushort.Parse(chunks[5]);
-			undoIndex = move50;
+			undoIndex = 0;
 		}
 
 		public string GetFenBase()
@@ -237,14 +233,13 @@ namespace NSRapchess
 
 		public string GetFen()
 		{
-			return $"{GetEpd()} {move50} {MoveNumber}";
+			return $"{GetEpd()} {CPosition.move50} {MoveNumber}";
 		}
-
 
 		private static ulong RandomUInt64()
 		{
 			byte[] bytes = new byte[8];
-			random.NextBytes(bytes);
+			rnd.NextBytes(bytes);
 			return BitConverter.ToUInt64(bytes, 0);
 		}
 
@@ -301,7 +296,7 @@ namespace NSRapchess
 				if (undoStack[pos].hash == hash)
 					return true;
 				pos -= 2;
-				if (pos < undoIndex - move50)
+				if (pos < undoIndex - CPosition.move50)
 					return false;
 			}
 			return false;
@@ -314,7 +309,7 @@ namespace NSRapchess
 			{
 				int emo = moves.table[n].move;
 				MakeMove(emo);
-				if (CMovesGenerator.IsSquareAttacked(CPosition.enKing, CPosition.usCol))
+				if (CMovesGenerator.IsSquareAttacked(CPosition.enRS.kingPosition, CPosition.usCol))
 					moves.RemoveAt(n);
 				UnmakeMove(emo);
 			}
@@ -356,13 +351,13 @@ namespace NSRapchess
 			undo.hash = hash;
 			undo.passing = CPosition.passant;
 			undo.castle = castleRights;
-			undo.move50 = move50;
+			undo.move50 = CPosition.move50;
 			hash ^= arrHashBoard[fr, piece];
 			CPosition.passant = -1;
 			if (captured != Constants.colEmpty)
 			{
-				move50 = 0;
-				phase--;
+				CPosition.move50 = 0;
+				CPosition.phase--;
 				CBitboard.Del(ref CPosition.bitBoard[captured], capi);
 			}
 			else if (rank == Constants.piecePawn)
@@ -371,10 +366,10 @@ namespace NSRapchess
 					CPosition.passant = fr + 8;
 				if (to == (fr - 16))
 					CPosition.passant = fr - 8;
-				move50 = 0;
+				CPosition.move50 = 0;
 			}
 			else
-				move50++;
+				CPosition.move50++;
 			int newPiece = ((move & Constants.maskPromotion) > 0) ? (piece & Constants.maskColor) | ((move >> 12) & Constants.maskRank) : piece;
 			CPosition.board[to] = newPiece;
 			CBitboard.Add(ref CPosition.bitBoard[newPiece], to);
@@ -396,7 +391,7 @@ namespace NSRapchess
 			CUndo undo = undoStack[--undoIndex];
 			CPosition.passant = undo.passing;
 			castleRights = undo.castle;
-			move50 = undo.move50;
+			CPosition.move50 = undo.move50;
 			hash = undo.hash;
 			int capP = undo.captured;
 			CBitboard.Del(ref CPosition.bitBoard[piece], to);
@@ -436,54 +431,90 @@ namespace NSRapchess
 			CPosition.board[capI] = capP;
 			if (capP != Constants.colEmpty)
 			{
-				phase++;
+				CPosition.phase++;
 				CBitboard.Add(ref CPosition.bitBoard[capP], capI);
 			}
 			CPosition.halfMove--;
 			CPosition.ChangeColor();
 		}
 
-		int Quiesce(int ply, int alpha, int beta)
+		bool CanReturnTT(CRec rec, int beta)
+		{
+			if ((rec.type == RecType.beta) && (rec.value >= beta)) return true;
+			if ((rec.type == RecType.alpha) && (rec.value < beta)) return true;
+			return false;
+		}
+
+		int Quiesce(NodeType nt, int ply, int alpha, int beta)
 		{
 			if ((++nodeCur & 0xffff) == 0)
 				engineStop = GetStop();
 			if (engineStop)
 				return -Constants.CHECKMATE_INFINITY;
+			/*if (nt != NodeType.Pv)
+			{
+				CTranspositionTable.GetRec(hash, CPosition.halfMove, 0, out CRec rec);
+				//CTranspositionTable.GetRec(hash, out CRec rec);
+				if (CanReturnTT(rec, beta))
+					return rec.value;
+			}*/
 			int score = CScore.Score();
 			if (score >= beta)
 				return beta;
 			if (score > alpha)
 				alpha = score;
+			int oldAlpha = alpha;
+			int bestMove = 0;
+			int bestValue = alpha;
+			int legalMoves = 0;
 			CMovePicker movePicker = new CMovePicker();
 			while (movePicker.NextMove(out Move move))
 			{
 				MakeMove(move);
-				if (CMovesGenerator.IsSquareAttacked(CPosition.enKing, CPosition.usCol))
+				if (CMovesGenerator.IsSquareAttacked(CPosition.enRS.kingPosition, CPosition.usCol))
 					score = -Constants.CHECKMATE_INFINITY;
 				else
-					score = -Quiesce(ply + 1, -beta, -alpha);
+				{
+					score = -Quiesce(nt, ply + 1, -beta, -alpha);
+					legalMoves++;
+				}
 				UnmakeMove(move);
+				if (score > bestValue)
+				{
+					bestValue = score;
+					bestMove = move;
+				}
 				if (score >= beta)
-					return score;
+					break;
 				if (score > alpha)
 					alpha = score;
 			}
-			return alpha;
+			if (!engineStop && (legalMoves > 0))
+			{
+				RecType rt = bestValue <= oldAlpha ? RecType.alpha : bestValue >= beta ? RecType.beta : RecType.exact;
+				CTranspositionTable.SetRec(new CRec(hash, 0, bestMove, bestValue, rt, CPosition.halfMove));
+			}
+			return bestValue;
 		}
 
-		int Search(int ply, int depth, int alpha, int beta)
+		int Search(NodeType nt, int ply, int depth, int alpha, int beta)
 		{
+			int oldAlpha = alpha;
+			int bestMove = 0;
+			int bestValue = alpha;
+			bool pvNode = nt != NodeType.NonPv;
 			if (ply == depthCur)
 				needDepth = true;
-			bool usChecked = CMovesGenerator.IsSquareAttacked(CPosition.usKing, CPosition.enCol);
-			if (usChecked && (ply > 0))
-				depth++;
-			if (depth <= 0)
-				return Quiesce(ply, alpha, beta);
+			bool usChecked = CMovesGenerator.IsSquareAttacked(CPosition.usRS.kingPosition, CPosition.enCol);
+			if ((depth <= 0) && !usChecked)
+				return Quiesce(nt, ply, alpha, beta);
 			if ((++nodeCur & 0xffff) == 0)
 				engineStop = GetStop();
 			if (engineStop)
 				return -Constants.CHECKMATE_INFINITY;
+
+			if ((ply > 0) && CPosition.usRS.insufficient && CPosition.enRS.insufficient)
+				return 0;
 
 			// Mate pruning
 			if (optMatePruning)
@@ -498,68 +529,82 @@ namespace NSRapchess
 					return ma;
 			}
 
+			// Null pruning
 			if (!usChecked && nullMove && (ply > 1) && (depth > 2) && CPosition.NotOnlyPawns())
 			{
 				nullMove = false;
 				hash ^= hashColor;
 				CPosition.ChangeColor();
-				int score = -Search(ply + 1, 1, -beta, -beta + 1);
+				int score = -Search(NodeType.NonPv, ply + 1, 1, -beta, -beta + 1);
 				nullMove = true;
 				hash ^= hashColor;
 				CPosition.ChangeColor();
 				if (score >= beta)
 					return beta;
 			}
-
-			Move recMove = 0;
-			RecType recType = RecType.alpha;
-			int legalMoves = 0;
 			if (ply > 0)
 			{
-				CTranspositionTable.GetRec(hash, depth, out CRec rec);
-				if (rec.type == RecType.exact) return rec.value;
-				if ((rec.type == RecType.beta) && (rec.value >= beta)) return rec.value;
-				if ((rec.type == RecType.alpha) && (rec.value <= alpha)) return rec.value;
+				CTranspositionTable.GetRec(hash, CPosition.halfMove, depth, out CRec rec);
+				if (pvNode ? rec.type == RecType.exact : CanReturnTT(rec, beta))
+				{
+					if (rec.value >= beta
+						&& (rec.move != 0)
+						&& !CPosition.IsCaptureOrPromotion(rec.move)
+						&& (killers[ply, 0]) != rec.move)
+					{
+						killers[ply, 1] = killers[ply, 0];
+						killers[ply, 0] = rec.move;
+					}
+					return rec.value;
+				}
 			}
+			bool isPvNode = false;
+			int legalMoves = 0;
 			CMovePicker movePicker = ply == 0 ? new CMovePicker(hash, moveList, killers[ply, 0], killers[ply, 1]) : new CMovePicker(hash, killers[ply, 0], killers[ply, 1]);
 			while (movePicker.NextMove(out Move move))
 			{
 				int score = -Constants.CHECKMATE_INFINITY;
-				bool reducible = !usChecked && (ply > 0) && (legalMoves > 0) && (alpha > -Constants.CHECKMATE_NEAR) && (!CScore.IsPassed(CPosition.usCol, move & Constants.maskMove)) && !CMovesGenerator.IsSquareAttacked(CPosition.usKing, CPosition.enCol);
+				bool reducible = !usChecked && (ply > 0) && (legalMoves > 0) && (move != killers[ply, 0]) && (move != killers[ply, 1]) && (alpha > -Constants.CHECKMATE_NEAR) && (!CScore.IsPassed(CPosition.usCol, move & Constants.maskMove));
 				MakeMove(move);
-				if (!CMovesGenerator.IsSquareAttacked(CPosition.enKing, CPosition.usCol))
+				if (CPosition.IsLegal())
 				{
-					if ((move50 >= 100) || (IsRepetition()))
+					if ((CPosition.move50 >= 100) || (IsRepetition()))
 						score = 0;
 					else
 					{
 						score = alpha + 1;
-						if (reducible)
-							score = -Search(ply + 1, depth - 2, -alpha - 1, -alpha);
+						if ((reducible) && (!CPosition.IsCheck()))
+							score = -Search(NodeType.NonPv, ply + 1, depth - 2, -alpha - 1, -alpha);
+						else if (isPvNode)
+							score = -Search(NodeType.NonPv, ply + 1, depth - 1, -alpha - 1, -alpha);
 						if (score > alpha)
-							score = -Search(ply + 1, depth - 1, -beta, -alpha);
+							score = -Search(NodeType.Pv, ply + 1, depth - 1, -beta, -alpha);
 					}
-					if (recMove == 0) recMove = move;
 					legalMoves++;
 				}
 				UnmakeMove(move);
+				if (score > bestValue)
+				{
+					bestValue = score;
+					bestMove = move;
+				}
 				if (score >= beta)
 				{
-					killers[ply, 1] = killers[ply, 0];
-					killers[ply, 0] = move;
-					CTranspositionTable.SetRec(new CRec(hash, depth, move, score, RecType.beta, CPosition.halfMove));
-					return beta;
+					if (killers[ply, 0] != move)
+					{
+						killers[ply, 1] = killers[ply, 0];
+						killers[ply, 0] = move;
+					}
+					break;
 				}
 				if (score > alpha)
 				{
+					isPvNode = true;
 					alpha = score;
-					recMove = move;
-					recType = RecType.exact;
 					if (ply == 0)
 					{
-						CTranspositionTable.SetRec(new CRec(hash, depth, move, score, RecType.exact, CPosition.halfMove));
 						string bsFm = EmoToUmo(move);
-						string pv = GetBstMoves();
+						string pv = GetBstMoves(move);
 						string scFm = score > Constants.CHECKMATE_NEAR ? $"mate {(Constants.CHECKMATE_MAX - score) >> 1}" : ((score < -Constants.CHECKMATE_NEAR) ? $"mate {(-Constants.CHECKMATE_MAX - score + 2) >> 1}" : $"cp {score}");
 						double t = stopwatch.Elapsed.TotalMilliseconds;
 						double nps = t > 0 ? nodeCur / t * 1000 : 0;
@@ -568,32 +613,40 @@ namespace NSRapchess
 					}
 				}
 			}
-			if (legalMoves == 0)
-				if (usChecked)
-					alpha = -Constants.CHECKMATE_MAX + ply + 1;
-				else
-					alpha = 0;
 			if (!engineStop)
-				CTranspositionTable.SetRec(new CRec(hash, depth, recMove, alpha, recType, CPosition.halfMove));
-			return alpha;
+			{
+				if (legalMoves == 0)
+					if (usChecked)
+						bestValue = -Constants.CHECKMATE_MAX + ply + 1;
+					else
+						bestValue = 0;
+				if (legalMoves > 0)
+				{
+					RecType rt = bestValue <= oldAlpha ? RecType.alpha : bestValue >= beta ? RecType.beta : RecType.exact;
+					CTranspositionTable.SetRec(new CRec(hash, depth, bestMove, bestValue, rt, CPosition.halfMove));
+				}
+			}
+			return bestValue;
 		}
 
-		public string GetBstMoves()
+		public string GetBstMoves(Move move)
 		{
 			string result = String.Empty;
 			bstMoves.Clear();
-			int count = 0;
+			int count = 1;
+			bstMoves.Add(move);
+			MakeMove(move);
 			do
 			{
-				CTranspositionTable.GetRecScore(hash, out Move move);
+				CTranspositionTable.GetRecExact(hash, out move);
 				if (!CMovesGenerator.IsHashMoveValid(move))
 					break;
 				bstMoves.Add(move);
 				MakeMove(move);
-				if (CMovesGenerator.IsSquareAttacked(CPosition.enKing, CPosition.usCol))
+				if (!CPosition.IsLegal())
 					break;
 				count++;
-			} while ((move50 < 100) && !IsRepetition());
+			} while ((CPosition.move50 < 100) && !IsRepetition());
 			for (int n = bstMoves.Count - 1; n >= 0; n--)
 				UnmakeMove(bstMoves[n]);
 			for (int n = 0; n < count; n++)
@@ -601,14 +654,8 @@ namespace NSRapchess
 			return result.Trim();
 		}
 
-		public void Start(int depth, int time, ulong nodes)
+		public void Start(MList mo,int depth, int time, ulong nodes)
 		{
-			MList mo = GenerateMovesLegal();
-			if (mo.count == 0)
-			{
-				Console.WriteLine($"info string no moves");
-				return;
-			}
 			engineStop = false;
 			timeOut = time;
 			depthOut = depth;
@@ -625,7 +672,7 @@ namespace NSRapchess
 				needDepth = false;
 				nullMove = optNullPruning;
 				Console.WriteLine($"info depth {depthCur}");
-				Search(0, depthCur, -Constants.CHECKMATE_MAX, Constants.CHECKMATE_MAX);
+				Search(NodeType.Root, 0, depthCur, -Constants.CHECKMATE_MAX, Constants.CHECKMATE_MAX);
 				double ms = stopwatch.Elapsed.TotalMilliseconds;
 				double nps = ms > 0 ? (nodeCur * 1000.0) / ms : 0;
 				Console.WriteLine($"info time {Convert.ToInt64(ms)} nodes {nodeCur} nps {Convert.ToInt64(nps)}");
@@ -659,28 +706,44 @@ namespace NSRapchess
 		{
 			synStop.SetStop(false);
 			stopwatch.Restart();
-			int time = Program.uci.GetInt("movetime", 0);
-			int depth = Program.uci.GetInt("depth", 0);
-			ulong node = (ulong)Program.uci.GetInt("nodes", 0);
-			int infinite = Program.uci.GetIndex("infinite", 0);
+			MList mo = GenerateMovesLegal();
+			if (mo.count == 0)
+			{
+				Console.WriteLine($"info string no moves");
+				return;
+			}
+			if (mo.count == 1)
+			{
+				Console.WriteLine($"bestmove {EmoToUmo(mo.table[0].move)}");
+				return;
+			}
+			int time = Program.uci.GetInt("movetime");
+			int depth = Program.uci.GetInt("depth");
+			ulong node = (ulong)Program.uci.GetInt("nodes");
+			int infinite = Program.uci.GetIndex("infinite");
 			if ((time == 0) && (depth == 0) && (node == 0) && (infinite == 0))
 			{
-				double ct = CPosition.IsWhiteTurn() ? Program.uci.GetInt("wtime", 0) : Program.uci.GetInt("btime", 0);
-				double mg = Program.uci.GetInt("movestogo", 0x40);
-				time = Convert.ToInt32(ct / mg);
+				double ct = CPosition.IsWhiteTurn() ? Program.uci.GetInt("wtime") : Program.uci.GetInt("btime");
+				double inc = CPosition.IsWhiteTurn() ? Program.uci.GetInt("winc") : Program.uci.GetInt("binc");
+				double mg = Program.uci.GetInt("movestogo", 32);
+				double mod = mo.count / mg;
+				if (mod > 1)
+					mod = 1;
+				time = Convert.ToInt32(((ct - 1000.0) * mod + inc * mg * mod)/ mg);
 				if (time < 1)
 					time = 1;
 			}
-			StartThread(depth, time, node);
+			StartThread(mo,depth, time, node);
 		}
 
 		public void Thread()
 		{
-			Start(inDepth, inTime, inNodes);
+			Start(inMoves,inDepth, inTime, inNodes);
 		}
 
-		public void StartThread(int depth, int time, ulong nodes)
+		public void StartThread(MList moves,int depth, int time, ulong nodes)
 		{
+			inMoves = moves;
 			inDepth = depth;
 			inTime = time;
 			inNodes = nodes;

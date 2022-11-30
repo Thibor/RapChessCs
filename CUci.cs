@@ -11,7 +11,7 @@ namespace NSRapchess
 		public string command;
 		public string[] tokens;
 
-		public int GetIndex(string key, int def)
+		public int GetIndex(string key, int def=0)
 		{
 			for (int n = 0; n < tokens.Length; n++)
 			{
@@ -23,7 +23,7 @@ namespace NSRapchess
 			return def;
 		}
 
-		public int GetInt(string key, int def)
+		public int GetInt(string key, int def=0)
 		{
 			for (int n = 0; n < tokens.Length - 1; n++)
 				if (tokens[n] == key)

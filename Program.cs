@@ -14,11 +14,11 @@ namespace NSRapchess
 
 		static void Main()
 		{
-			string version = "2021-07-22";
+			string version = "2022-11-20";
 
 			while (true)
 			{
-			    string msg = Console.ReadLine();
+				string msg = Console.ReadLine();
 				uci.SetMsg(msg);
 				switch (uci.command)
 				{
@@ -37,7 +37,7 @@ namespace NSRapchess
 						Console.WriteLine("readyok");
 						break;
 					case "setoption":
-						switch (uci.GetStr("name", ""))
+						switch (uci.GetStr("name"))
 						{
 							case "MatePruning":
 								CEngine.optMatePruning = uci.GetStr("value", "true") == "true";
@@ -67,7 +67,7 @@ namespace NSRapchess
 						break;
 					case "position":
 						string fen = String.Empty;
-						int lo = uci.GetIndex("fen", 0);
+						int lo = uci.GetIndex("fen");
 						int hi = uci.GetIndex("moves", uci.tokens.Length);
 						if (lo > 0)
 						{
@@ -81,7 +81,7 @@ namespace NSRapchess
 							}
 						}
 						engine.SetFen(fen);
-						lo = uci.GetIndex("moves", 0);
+						lo = uci.GetIndex("moves");
 						hi = uci.GetIndex("fen", uci.tokens.Length);
 						if (lo > 0)
 						{
@@ -99,7 +99,7 @@ namespace NSRapchess
 									break;
 								}
 								engine.MakeMove(emo);
-								if (engine.move50 == 0)
+								if (CPosition.move50 == 0)
 									engine.undoIndex = 0;
 							}
 						}

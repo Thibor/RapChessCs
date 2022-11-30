@@ -13,16 +13,18 @@ namespace NSRapchess
 	static class CPosition
 	{
 		public static int passant = -1;
+		public static int phase = 32;
 		public static ushort halfMove = 0;
+		public static byte move50 = 0;
 		public static Color usCol = Constants.colWhite;
 		public static Color enCol = Constants.colBlack;
-		public static Square usKing;
-		public static Square enKing;
 		public static ulong[] bitBoard = new ulong[16];
 		public static int[] board = new int[64];
 		public static ulong usBitboard = 0;
 		public static ulong enBitboard = 0;
 		public static ulong emBitboard = 0;
+		public static RScore usRS;
+		public static RScore enRS;
 
 		public static string Passant
 		{
@@ -40,15 +42,34 @@ namespace NSRapchess
 		{
 			usCol = c;
 			enCol = c ^ Constants.maskColor;
-			usKing = CBitboard.Read(bitBoard[usCol | Constants.pieceKing]);
-			enKing = CBitboard.Read(bitBoard[enCol | Constants.pieceKing]);
 			bitBoard[usCol] = bitBoard[Constants.piecePawn | usCol] | bitBoard[Constants.pieceKnight | usCol] | bitBoard[Constants.pieceBishop | usCol] | bitBoard[Constants.pieceRook | usCol] | bitBoard[Constants.pieceQueen | usCol] | bitBoard[Constants.pieceKing | usCol];
 			bitBoard[enCol] = bitBoard[Constants.piecePawn | enCol] | bitBoard[Constants.pieceKnight | enCol] | bitBoard[Constants.pieceBishop | enCol] | bitBoard[Constants.pieceRook | enCol] | bitBoard[Constants.pieceQueen | enCol] | bitBoard[Constants.pieceKing | enCol];
 			usBitboard = bitBoard[usCol];
 			enBitboard = bitBoard[enCol];
 			emBitboard = ~(usBitboard | enBitboard);
+			usRS = new RScore(CPosition.usCol);
+			enRS = new RScore(CPosition.enCol);
 		}
 
+		public static bool IsCaptureOrPromotion(Move move)
+		{
+			return ((move & Constants.maskPromotion) > 0) || (board[(move >> 6) & 0x3f] != 0);
+		}
+
+		public static bool IsSpecialCapture(Move move)
+		{
+			return ((move & Constants.maskSpecial) > 0) || (board[(move >> 6) & 0x3f] != 0);
+		}
+
+		public static bool IsCheck()
+		{
+			return CMovesGenerator.IsSquareAttacked(usRS.kingPosition, enCol);
+		}
+
+		public static bool IsLegal()
+		{
+			return !CMovesGenerator.IsSquareAttacked(enRS.kingPosition, usCol);
+		}
 		public static bool IsWhiteTurn()
 		{
 			return usCol == Constants.colWhite;

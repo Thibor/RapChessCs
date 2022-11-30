@@ -30,15 +30,19 @@ namespace NSRapchess
 			for (int n = 0; n < startMoves.count; n++)
 			{
 				int m = startMoves.table[n].move;
-				int s = GetScore(m);
-				if (s > 0) pickerList.Add(new MoveStack(m, s));
+				int s = GetScore(m,out int rankFr,out int rankTo);
+				if ((s >= 0)&&(rankFr <= rankTo))
+					//if ((rankFr < rankTo)||((rankFr==rankTo)&&(s>0)))
+						pickerList.Add(new MoveStack(m, s));
 			}
 			phase = 2;
 		}
 
 		public CMovePicker(Hash hash, MList moves, Move killer1, Move killer2)
 		{
-			recList = CTranspositionTable.GetMoves(hash);
+			CTranspositionTable.GetRec(hash, out CRec rec);
+			if (rec.move > 0)
+				recList.Add(rec.move);
 			recList.Add(killer1);
 			recList.Add(killer2);
 			startMoves = moves;
@@ -46,7 +50,9 @@ namespace NSRapchess
 
 		public CMovePicker(Hash hash, Move killer1, Move killer2)
 		{
-			recList = CTranspositionTable.GetMoves(hash);
+			CTranspositionTable.GetRec(hash, out CRec rec);
+			if (rec.move > 0)
+				recList.Add(rec.move);
 			recList.Add(killer1);
 			recList.Add(killer2);
 		}
@@ -83,7 +89,7 @@ namespace NSRapchess
 				for (int n = 0; n < startMoves.count; n++)
 				{
 					int m = startMoves.table[n].move;
-					int s = GetScore(m);
+					int s = GetScore(m,out _,out _);
 					pickerList.Add(new MoveStack(m, s));
 				}
 				index = 0;
@@ -108,14 +114,16 @@ namespace NSRapchess
 			return true;
 		}
 
-		int GetScore(int move)
+		int GetScore(int move,out int rankFr,out int rankTo)
 		{
 			int fr = move & 0x3f;
 			int to = (move >> 6) & 0x3f;
 			int pr = (move >> 12) & 7;
-			int phase = CEngine.phase;
+			int phase = CPosition.phase;
 			int pieceFr = CPosition.board[fr];
 			int pieceTo = CPosition.board[to];
+			rankFr = pieceFr & 7;
+			rankTo = pieceTo & 7;
 			int score = -CScore.bonMaterialPhase[pieceFr, fr, phase];
 			if (pr == 0)
 				score += CScore.bonMaterialPhase[pieceFr, to, phase];
