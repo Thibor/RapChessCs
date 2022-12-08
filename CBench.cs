@@ -75,7 +75,8 @@ namespace NSRapchess
 			log.Add(msg);
 			if (!modeScore)
 				History();
-			Console.WriteLine("bench end");
+			Console.WriteLine("finish");
+			Console.Beep();
 			if (modeSort)
 				Sort();
 		}
@@ -98,7 +99,7 @@ namespace NSRapchess
 						continue;
 					case "finish":
 						if (fenList.Count == 0)
-							CScore.Trace();
+							CEvaluate.Trace();
 						BenchFinish();
 						return;
 					case "fen":
@@ -128,7 +129,7 @@ namespace NSRapchess
 				string fen = Program.engine.GetFen();
 				fenList.Add(fen);
 				if (modeScore)
-					CScore.Trace();
+					CEvaluate.Trace();
 				else
 				{
 					CTranspositionTable.Clear();
@@ -155,7 +156,7 @@ namespace NSRapchess
 				BenchStart();
 			}
 			else
-				CScore.Trace();
+				CEvaluate.Trace();
 		}
 
 	}

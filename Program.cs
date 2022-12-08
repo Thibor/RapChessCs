@@ -1,8 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Threading;
-using System.IO;
 
 namespace NSRapchess
 {
@@ -14,7 +10,7 @@ namespace NSRapchess
 
 		static void Main()
 		{
-			string version = "2022-11-20";
+			string version = "2022-12-08";
 
 			while (true)
 			{
@@ -44,17 +40,12 @@ namespace NSRapchess
 								string mp = CEngine.optMatePruning ? "on" : "off";
 								Console.WriteLine($"info string MatePruning {mp}");
 								break;
-							case "NullPruning":
-								CEngine.optNullPruning = uci.GetStr("value", "true") == "true";
-								string np = CEngine.optNullPruning ? "on" : "off";
-								Console.WriteLine($"info string NullPruning {np}");
-								break;
 							case "MultiPV":
 								CEngine.optMultiPv = uci.GetInt("value", CEngine.optMultiPv);
 								break;
 							case "SkillLevel":
 								int level = uci.GetInt("value", 100);
-								CScore.SetLevel(level);
+								CEvaluate.SetLevel(level);
 								break;
 							case "Hash":
 								int hash = uci.GetInt("value", CTranspositionTable.DEFAULT_SIZE_MB);

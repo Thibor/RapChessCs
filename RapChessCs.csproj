@@ -92,11 +92,11 @@
     <Compile Include="CBench.cs" />
     <Compile Include="CBitBoard.cs" />
     <Compile Include="CEngine.cs" />
+    <Compile Include="CEvaluate.cs" />
     <Compile Include="CMovePicker.cs" />
     <Compile Include="CMovesGenerator.cs" />
     <Compile Include="Constants.cs" />
     <Compile Include="CPosition.cs" />
-    <Compile Include="CScore.cs" />
     <Compile Include="CSynStop.cs" />
     <Compile Include="CTranspositionTable.cs" />
     <Compile Include="CUci.cs" />

@@ -1,4 +1,5 @@
-﻿using Color = System.Int32;
+﻿using System.Runtime.CompilerServices;
+using Color = System.Int32;
 using Move = System.Int32;
 using Bitboard = System.UInt64;
 using Square = System.Int32;
@@ -13,16 +14,22 @@ namespace NSRapchess
         /// </summary>
         private static readonly int[] BitIndex = new int[64];
 
+        public static Bitboard[] bb = new Bitboard[64];
+
         static CBitboard()
 		{
             // Initialize bit index table. 
             for (int i = 0; i < 64; i++)
-                BitIndex[((1UL << i) * 0x07EDD5E59A4E28C2UL) >> 58] = i;
+            {
+                Bitboard b = 1ul << i;
+                bb[i] = b;
+                BitIndex[(b * 0x07EDD5E59A4E28C2UL) >> 58] = i;
+            }
         }
 
 		public static void Add(ref ulong board, int index)
 		{
-			board |= 1ul << index;
+			board |= bb[index];
 		}
 
 		public static void Add(ref ulong board, int x, int y)
@@ -41,7 +48,7 @@ namespace NSRapchess
 
 		public static void Del(ref ulong board, int index)
 		{
-			board &= ~(1ul << index);
+			board &= ~bb[index];
 		}
 
         /// <summary>
@@ -50,6 +57,7 @@ namespace NSRapchess
         /// </summary>
         /// <param name="bitboard">The bitboard to pop.</param>
         /// <returns>The index of the least significant set bit.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int Pop(ref Bitboard bitboard)
         {
             Bitboard isolatedBit = bitboard & (0UL - bitboard);
@@ -93,6 +101,7 @@ namespace NSRapchess
         /// </summary>
         /// <param name="bitboard">The bitboard to count.</param>
         /// <returns>The number of set bits.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int Count(Bitboard bitboard)
         {
             bitboard -= (bitboard >> 1) & 0x5555555555555555UL;

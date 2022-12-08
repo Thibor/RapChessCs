@@ -51,6 +51,12 @@ namespace NSRapchess
 			enRS = new RScore(CPosition.enCol);
 		}
 
+		public static bool IsCapture(Move move)
+		{
+			return board[(move >> 6) & 0x3f] != 0;
+		}
+
+
 		public static bool IsCaptureOrPromotion(Move move)
 		{
 			return ((move & Constants.maskPromotion) > 0) || (board[(move >> 6) & 0x3f] != 0);
@@ -70,6 +76,12 @@ namespace NSRapchess
 		{
 			return !CMovesGenerator.IsSquareAttacked(enRS.kingPosition, usCol);
 		}
+
+		public static bool IsPawnOnRank7()
+		{
+			return (bitBoard[usCol | Constants.piecePawn] & CEvaluate.bbRank[6, usCol >> 3]) > 0;
+		}
+
 		public static bool IsWhiteTurn()
 		{
 			return usCol == Constants.colWhite;

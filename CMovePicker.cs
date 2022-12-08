@@ -30,10 +30,8 @@ namespace NSRapchess
 			for (int n = 0; n < startMoves.count; n++)
 			{
 				int m = startMoves.table[n].move;
-				int s = GetScore(m,out int rankFr,out int rankTo);
-				if ((s >= 0)&&(rankFr <= rankTo))
-					//if ((rankFr < rankTo)||((rankFr==rankTo)&&(s>0)))
-						pickerList.Add(new MoveStack(m, s));
+				int s = GetScore(m);
+				pickerList.Add(new MoveStack(m, s));
 			}
 			phase = 2;
 		}
@@ -59,7 +57,6 @@ namespace NSRapchess
 
 		public bool NextMove(out Move move)
 		{
-			//send rec.move
 			if (phase == 0)
 			{
 				while (index < recList.count)
@@ -72,24 +69,18 @@ namespace NSRapchess
 					}
 				}
 				if (startMoves.count == 0)
-				{
 					startMoves = CMovesGenerator.GenerateMovesAll();
-					Debug.Assert(startMoves.table[0].move > 0);
-					if (startMoves.table[0].move < 0)
-						startMoves = CMovesGenerator.GenerateMovesAll();
-				}
 				for (int n = 0; n < usedMoves.count; n++)
 					startMoves.Remove(usedMoves.table[n].move);
 				index = 0;
 				phase = 1;
 			}
-			//create moves list
 			if (phase == 1)
 			{
 				for (int n = 0; n < startMoves.count; n++)
 				{
 					int m = startMoves.table[n].move;
-					int s = GetScore(m,out _,out _);
+					int s = GetScore(m);
 					pickerList.Add(new MoveStack(m, s));
 				}
 				index = 0;
@@ -114,7 +105,7 @@ namespace NSRapchess
 			return true;
 		}
 
-		int GetScore(int move,out int rankFr,out int rankTo)
+		int GetScore(int move)
 		{
 			int fr = move & 0x3f;
 			int to = (move >> 6) & 0x3f;
@@ -122,15 +113,13 @@ namespace NSRapchess
 			int phase = CPosition.phase;
 			int pieceFr = CPosition.board[fr];
 			int pieceTo = CPosition.board[to];
-			rankFr = pieceFr & 7;
-			rankTo = pieceTo & 7;
-			int score = -CScore.bonMaterialPhase[pieceFr, fr, phase];
+			int score = -CEvaluate.bonPositionPhase[pieceFr, fr, phase];
 			if (pr == 0)
-				score += CScore.bonMaterialPhase[pieceFr, to, phase];
+				score += CEvaluate.bonPositionPhase[pieceFr, to, phase];
 			else
-				score += CScore.bonMaterialPhase[CPosition.usCol | pr, to, phase];
+				score += CEvaluate.bonPositionPhase[CPosition.usCol | pr, to, phase];
 			if (pieceTo > 0)
-				score += CScore.bonMaterialPhase[pieceTo, to, phase];
+				score += CEvaluate.bonPositionPhase[pieceTo, to, phase];
 			return score;
 		}
 

@@ -24,47 +24,24 @@ namespace NSRapchess
 		public int value;//4
 		public int move;//4
 		public byte depth;//1
-		public ushort halfMove;//2
+		public byte age;//1
 		public RecType type;//1
 
-		public CRec(ulong hash, int depth, int move, int value, RecType type, ushort halfMove)
+		public CRec(ulong hash, int depth, int move, int value, RecType type, byte age)
 		{
 			this.hash = hash;
 			this.depth = (byte)depth;
 			this.move = move;
 			this.value = value;
 			this.type = type;
-			this.halfMove = halfMove;
-		}
-
-	}
-
-	public class CRecList
-	{
-		internal readonly CRec[] table = new CRec[CTranspositionTable.clusterSize + 2];
-		internal int count = 0;
-
-		public void Add(CRec rec)
-		{
-			table[count++] = rec;
-		}
-
-		public void RemoveAt(int i)
-		{
-			count--;
-			(table[i], table[count]) = (table[count], table[i]);
-		}
-
-		public void CopyTo(CRecList to)
-		{
-			Array.Copy(this.table, to.table, count);
-			to.count = count;
+			this.age = age;
 		}
 
 	}
 
 	internal class CTranspositionTable
 	{
+		static byte generation = 0;
 		static ulong used = 0;
 		public const int DEFAULT_SIZE_MB = 20;
 		static ulong hashMask;
@@ -88,35 +65,26 @@ namespace NSRapchess
 				length <<= 1;
 			table = new CRec[length--];
 			hashMask = (ulong)(length & ~clusterMask);
-			used=0;
+			used = 0;
 		}
 
 		public static void Clear()
 		{
 			used = 0;
+			generation = 0;
 			Array.Clear(table, 0, table.Length);
+		}
+
+		public static void NextGeneration()
+		{
+			if (++generation == 0)
+				Clear();
 		}
 
 		public static int Permill()
 		{
 			return (int)(used * 1000ul / (ulong)table.Length);
 		}
-
-		/*public static MList GetMoves(Hash hash)
-		{
-			MList moves = new MList();
-			int index = (int)(hash & hashMask);
-			for (int n = 0; n < clusterSize; n++)
-			{
-				CRec rec = table[index + n];
-				if ((rec.hash == hash) && (rec.move != 0))
-				{
-					moves.Add(rec.move);
-					break;
-				}
-			}
-			return moves;
-		}*/
 
 		public static void GetRecExact(ulong hash, out Move move)
 		{
@@ -140,16 +108,26 @@ namespace NSRapchess
 			for (int n = 0; n < clusterSize; n++)
 			{
 				rec = table[iStart + n];
-				//if ((rec.hash == hash)&&(rec.halfMove+rec.depth>=halfMove+depth))
-				//if ((rec.hash == hash) && (rec.halfMove >= halfMove))
-				//if ((rec.hash == hash) && (rec.depth >= depth))
-				if ((rec.hash == hash) && (rec.halfMove >= halfMove) && (rec.depth >= depth))
+				if ((rec.hash == hash) && (rec.age >= halfMove) && (rec.depth >= depth))
 					return;
-				/*if ((rec.depth < depth) || (rec.halfMove < halfMove))
-					break;
-				else */
-				/*if (rec.hash == hash)
-					return;*/
+			}
+			rec = empty;
+		}
+
+		public static void GetRec(ulong hash, int depth, out CRec rec)
+		{
+			int iStart = (int)(hash & hashMask);
+			for (int n = 0; n < clusterSize; n++)
+			{
+				rec = table[iStart + n];
+				if (rec.hash == hash)
+				{
+					if (rec.depth < depth)
+						rec = empty;
+					else
+						table[iStart + n].age = generation;
+					return;
+				}
 			}
 			rec = empty;
 		}
@@ -160,14 +138,15 @@ namespace NSRapchess
 			for (int n = 0; n < clusterSize; n++)
 			{
 				rec = table[iStart + n];
-				if ((rec.hash == hash)||(rec.type==RecType.invalid))
+				if (rec.hash == hash)
 					return;
 			}
 			rec = empty;
 		}
 
-		public static void SetRec(CRec rec)
+		public static void SetRec(ulong hash, int depth, int bestMove, int bestValue, RecType rt)
 		{
+			CRec rec = new CRec(hash, depth, bestMove, bestValue, rt, generation);
 			int iStart = (int)(rec.hash & hashMask);
 			ref CRec rep = ref table[iStart];
 			for (int n = 0; n < clusterSize; n++)
@@ -186,18 +165,12 @@ namespace NSRapchess
 					cur = rec;
 					return;
 				}
-				int c1 = rep.halfMove < rec.halfMove ? 2 : 0;
-				int c2 = (cur.halfMove == rec.halfMove) || (cur.type == RecType.exact) ? -2 : 0;
-				int c3 = cur.depth < rec.depth ? 1 : 0;
-				if (c1 + c2 + c3 > 0)
+				if (((cur.age == generation || cur.type == RecType.exact) ? 1 : 0)
+				   - ((rep.age == generation) ? 1 : 0)
+				   - ((cur.depth < rep.depth) ? 1 : 0) < 0)
 					rep = cur;
 			}
 			rep = rec;
-			/*if (table[iStart + clusterSize - 1].type == RecType.invalid)
-				used++;
-			for (int i = clusterSize - 1; i > 0; i--)
-				table[iStart + i] = table[iStart + i - 1];
-			table[iStart] = rec;*/
 		}
 
 	}
