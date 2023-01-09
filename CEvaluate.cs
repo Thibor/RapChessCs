@@ -550,8 +550,9 @@ namespace NSRapchess
 			for (int r = 0; r < 16; r++)
 				for (int f = 0; f < 64; f++)
 				{
-					int del = level == 100 ? 0 : rnd.Next(dl) - (dl >> 1);
-					bonPositionMg[r, f] = orgPositionMg[r, f] + (del << 3);
+					int valO = (orgPositionMg[r, f]*level)/100;
+					int valD = ((rnd.Next(800) - 400)*(100-level))/100;
+					bonPositionMg[r, f] = valO + valD;
 					bonPositionEg[r, f] = orgPositionEg[r, f];
 					for (int p = 0; p < 33; p++)
 					{

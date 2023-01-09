@@ -44,6 +44,7 @@ namespace NSRapchess
 		private static readonly Random rnd = new Random(1);
 		public CSynStop synStop = new CSynStop();
 		public static bool optMatePruning = true;
+		public static bool optNullPruning = true;
 		public static int optMultiPv = 1;
 
 		public ushort MoveNumber
@@ -523,7 +524,7 @@ namespace NSRapchess
 			}
 
 			// Null pruning
-			if ((ply > 1) && !usChecked &&  (depth > 2) && CPosition.NotOnlyPawns())
+			if (optNullPruning && (ply > 1) && !usChecked &&  (depth > 2) && CPosition.NotOnlyPawns())
 			{
 				hash ^= hashColor;
 				CPosition.ChangeColor();
@@ -715,7 +716,7 @@ namespace NSRapchess
 			int time = Program.uci.GetInt("movetime");
 			int depth = Program.uci.GetInt("depth");
 			ulong node = (ulong)Program.uci.GetInt("nodes");
-			int infinite = Program.uci.GetIndex("infinite");
+			int infinite = Program.uci.GetIndex("infinite",0);
 			if ((time == 0) && (depth == 0) && (node == 0) && (infinite == 0))
 			{
 				double ct = CPosition.IsWhiteTurn() ? Program.uci.GetInt("wtime") : Program.uci.GetInt("btime");

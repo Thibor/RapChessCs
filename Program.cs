@@ -1,4 +1,5 @@
 ﻿using System;
+using NSUci;
 
 namespace NSRapchess
 {
@@ -22,10 +23,10 @@ namespace NSRapchess
 						Console.WriteLine($"id name Rapcschess {version}");
 						Console.WriteLine("id author Thibor Raven");
 						Console.WriteLine("id link https://github.com/Thibor/RapChessCs");
-						Console.WriteLine("option name MatePruning type check default true");
-						Console.WriteLine("option name NullPruning type check default true");
+						Console.WriteLine("option name Mate pruning type check default true");
+						Console.WriteLine("option name Null pruning type check default true");
 						Console.WriteLine($"option name MultiPV type spin default {CEngine.optMultiPv} min 1 max 100");
-						Console.WriteLine("option name SkillLevel type spin default 100 min 0 max 100");
+						Console.WriteLine("option name Skill level type spin default 100 min 0 max 100");
 						Console.WriteLine($"option name Hash type spin default {CTranspositionTable.DEFAULT_SIZE_MB} min 0 max 200");
 						Console.WriteLine("uciok");
 						break;
@@ -33,21 +34,24 @@ namespace NSRapchess
 						Console.WriteLine("readyok");
 						break;
 					case "setoption":
-						switch (uci.GetStr("name"))
+						switch (uci.GetValue("name","value").ToLower())
 						{
-							case "MatePruning":
-								CEngine.optMatePruning = uci.GetStr("value", "true") == "true";
-								string mp = CEngine.optMatePruning ? "on" : "off";
-								Console.WriteLine($"info string MatePruning {mp}");
+							case "mate pruning":
+								CEngine.optMatePruning = uci.GetValue("value") == "true";
+								Console.WriteLine("info string Mate pruning" + (CEngine.optMatePruning ? "on" : "off"));
 								break;
-							case "MultiPV":
+							case "null pruning":
+								CEngine.optNullPruning = uci.GetValue("value") == "true";
+								Console.WriteLine("info string Null pruning" + (CEngine.optNullPruning ? "on" : "off"));
+								break;
+							case "multipv":
 								CEngine.optMultiPv = uci.GetInt("value", CEngine.optMultiPv);
 								break;
-							case "SkillLevel":
+							case "skill level":
 								int level = uci.GetInt("value", 100);
 								CEvaluate.SetLevel(level);
 								break;
-							case "Hash":
+							case "hash":
 								int hash = uci.GetInt("value", CTranspositionTable.DEFAULT_SIZE_MB);
 								CTranspositionTable.Resize(hash);
 								break;
@@ -57,43 +61,8 @@ namespace NSRapchess
 						CTranspositionTable.Clear();
 						break;
 					case "position":
-						string fen = String.Empty;
-						int lo = uci.GetIndex("fen");
-						int hi = uci.GetIndex("moves", uci.tokens.Length);
-						if (lo > 0)
-						{
-							if (lo > hi)
-								hi = uci.tokens.Length;
-							for (int n = lo; n < hi; n++)
-							{
-								if (n > lo)
-									fen += ' ';
-								fen += uci.tokens[n];
-							}
-						}
-						engine.SetFen(fen);
-						lo = uci.GetIndex("moves");
-						hi = uci.GetIndex("fen", uci.tokens.Length);
-						if (lo > 0)
-						{
-							if (lo > hi)
-								hi = uci.tokens.Length;
-							string moves = String.Empty;
-							for (int n = lo; n < hi; n++)
-							{
-								string m = uci.tokens[n];
-								moves += $" {m}";
-								int emo = engine.UmoToEmo(m);
-								if (emo == 0)
-								{
-									Console.WriteLine($"info string wrong moves {moves}");
-									break;
-								}
-								engine.MakeMove(emo);
-								if (CPosition.move50 == 0)
-									engine.undoIndex = 0;
-							}
-						}
+						engine.SetFen(uci.GetValue("fen", "moves"));
+						engine.MakeMoves(uci.GetValue("moves"));
 						break;
 					case "go":
 						engine.UciGo();
@@ -104,9 +73,13 @@ namespace NSRapchess
 					case "quit":
 						engine.synStop.SetStop(true);
 						return;
+					case "eval":
+						Console.WriteLine($"evaluation {CEvaluate.Score()}");
+						break;
 					case "bench":
 						bench.Start();
 						break;
+
 				}
 
 			}
