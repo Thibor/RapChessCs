@@ -14,6 +14,7 @@ namespace NSRapchess
 
 	internal static class Constants
 	{
+		internal const int elo = 2000;
 		internal const int shiftDepth = 0;//6
 		internal const int piecePawn = 0x01;
 		internal const int pieceKnight = 0x02;
