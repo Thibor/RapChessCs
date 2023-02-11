@@ -26,7 +26,7 @@ namespace NSRapchess
 						Console.WriteLine("option name Mate pruning type check default true");
 						Console.WriteLine("option name Null pruning type check default true");
 						Console.WriteLine($"option name MultiPV type spin default {CEngine.optMultiPv} min 1 max 100");
-						Console.WriteLine($"option name Elo type spin default {Constants.elo} min 0 max {Constants.elo}");
+						Console.WriteLine($"option name UCI_Elo type spin default {Constants.elo} min 0 max {Constants.elo}");
 						Console.WriteLine("option name Skill level type spin default 100 min 0 max 100");
 						Console.WriteLine($"option name Hash type spin default {CTranspositionTable.DEFAULT_SIZE_MB} min 0 max 200");
 						Console.WriteLine("uciok");
@@ -52,7 +52,7 @@ namespace NSRapchess
 								int level = uci.GetInt("value", 100);
 								CEvaluate.SetLevel(level);
 								break;
-							case "elo":
+							case "uci_elo":
 								int elo = uci.GetInt("value", Constants.elo);
 								CEvaluate.SetLevel(elo * 100 / Constants.elo);
 								break;
