@@ -115,7 +115,7 @@ namespace NSRapchess
 				CPosition.board[n] = Constants.colEmpty;
 			for (int n = 0; n < 16; n++)
 				CPosition.bitBoard[n] = 0;
-			string[] chunks = fen.Split(' ');
+			string[] chunks = fen.Trim().Split();
 			int y = 0;
 			int x = 0;
 			string pieces = chunks[0];
