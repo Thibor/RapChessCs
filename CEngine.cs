@@ -717,7 +717,13 @@ namespace NSRapchess
 			int depth = Program.uci.GetInt("depth");
 			ulong node = (ulong)Program.uci.GetInt("nodes");
 			int infinite = Program.uci.GetIndex("infinite",0);
-			if ((time == 0) && (depth == 0) && (node == 0) && (infinite == 0))
+			if(time > 0) 
+			{
+				time -= 100;
+				if (time < 1)
+					time = 1;
+			}
+			else if ((time == 0) && (depth == 0) && (node == 0) && (infinite == 0))
 			{
 				double ct = CPosition.IsWhiteTurn() ? Program.uci.GetInt("wtime") : Program.uci.GetInt("btime");
 				double inc = CPosition.IsWhiteTurn() ? Program.uci.GetInt("winc") : Program.uci.GetInt("binc");
