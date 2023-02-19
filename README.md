@@ -1,7 +1,10 @@
 # RapChessCs
 
-![Clipboard](https://github.com/Thibor/RapChessCs/blob/master/Resources/RapChessCs.png)
-C# uci chess engine.
+<p align="center">
+<img src="https://github.com/Thibor/RapChessCs/blob/master/Resources/RapChessCs.png" width="600"/>
+</p>
+
+C# uci chess engine.<br/>
 To use this program you need install  <a href="https://dotnet.microsoft.com/download/dotnet-framework/net48">.NET Framework 4.8</a>
 
 ## Setup GUI Arena
