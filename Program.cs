@@ -66,7 +66,6 @@ namespace NSRapchess
 						CTranspositionTable.Clear();
 						break;
 					case "position":
-						uci.SetMsg("position fen rnb1kb2/1b1bbb2/8/8/4N3/2N2q2/1N4b1/RNB4R w Qq - 0 13");
 						engine.SetFen(uci.GetValue("fen", "moves"));
 						engine.MakeMoves(uci.GetValue("moves"));
 						break;
