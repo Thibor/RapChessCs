@@ -16,7 +16,7 @@ namespace NSRapchess
 //4 bits promotion
 //4 bits move flag
 {
-	public partial class CEngine
+	public partial class CSearch
 	{
 		int curPv = 1;
 		int inTime = 0;
@@ -25,10 +25,10 @@ namespace NSRapchess
 		MList inMoves = null;
 		public static int castleRights = 0xf;
 		ulong hash = 0;
-		ulong nodeCur = 0;
-		int timeOut = 0;
-		int depthOut = 0;
-		ulong nodeOut = 0;
+		public ulong nodeCur = 0;
+		public int timeOut = 0;
+		public int depthOut = 0;
+		public ulong nodeOut = 0;
 		int depthCur = 1;
 		bool engineStop = false;
 		public int undoIndex = 0;
@@ -40,7 +40,7 @@ namespace NSRapchess
 		Thread startThread;
 		public static MList moveList = new MList();
 		public static List<int> bstMoves = new List<int>();
-		public Stopwatch stopwatch = Stopwatch.StartNew();
+		public Stopwatch stopwatch = new Stopwatch();
 		private static readonly Random rnd = new Random(1);
 		public CSynStop synStop = new CSynStop();
 		public static bool optMatePruning = true;
@@ -64,7 +64,7 @@ namespace NSRapchess
 			}
 		}
 
-		public CEngine()
+		public CSearch()
 		{
 			hash = RandomUInt64();
 			for (int n = 0; n < 64; n++)
@@ -87,7 +87,11 @@ namespace NSRapchess
 		}
 		bool GetStop()
 		{
-			if (engineStop || (depthCur < 2))
+			if (engineStop)
+				return true;
+			if (depthCur < 2)
+				return false;
+			if (Program.dataIn.ponder)
 				return false;
 			if (((timeOut > 0) && (stopwatch.Elapsed.TotalMilliseconds > timeOut)) || ((depthOut > 0) && (depthCur > depthOut)) || ((nodeOut > 0) && (nodeCur > nodeOut)))
 				return true;
@@ -472,7 +476,8 @@ namespace NSRapchess
 				{
 					score = -Quiesce(nt, ply + 1, -beta, -alpha);
 					legalMoves++;
-				}else
+				}
+				else
 					score = -Constants.CHECKMATE_INFINITY;
 				UnmakeMove(move);
 				if (score > bestValue)
@@ -513,18 +518,14 @@ namespace NSRapchess
 			// Mate pruning
 			if (optMatePruning)
 			{
-				int ma = -Constants.CHECKMATE_MAX + ply;
-				int mb = Constants.CHECKMATE_MAX - ply - 1;
-				if (ma < alpha)
-					ma = alpha;
-				if (mb > beta)
-					mb = beta;
-				if (ma >= mb)
-					return ma;
+				int mate_value = Constants.CHECKMATE_MAX - ply;
+				if (alpha < -mate_value) alpha = -mate_value;
+				if (beta > mate_value - 1) beta = mate_value - 1;
+				if (alpha >= beta) return alpha;
 			}
 
 			// Null pruning
-			if (optNullPruning && (ply > 1) && !usChecked &&  (depth > 2) && CPosition.NotOnlyPawns())
+			if (optNullPruning && (ply > 1) && !usChecked && (depth > 2) && CPosition.NotOnlyPawns())
 			{
 				hash ^= hashColor;
 				CPosition.ChangeColor();
@@ -557,7 +558,7 @@ namespace NSRapchess
 			while (movePicker.NextMove(out Move move))
 			{
 				int score = -Constants.CHECKMATE_INFINITY;
-				bool reducible = (ply > 0) && (legalMoves>1) && !usChecked && (alpha > -Constants.CHECKMATE_NEAR) && (!CEvaluate.IsPassed(CPosition.usCol, (move >> 6) & Constants.maskMove));
+				bool reducible = (ply > 0) && (legalMoves > 1) && !usChecked && (alpha > -Constants.CHECKMATE_NEAR) && !CPosition.IsPassed(move);
 				MakeMove(move);
 				if (CPosition.IsLegal())
 				{
@@ -570,10 +571,10 @@ namespace NSRapchess
 						{
 							if (reducible && !CPosition.IsCheck())
 								score = -Search(NodeType.NonPv, ply + 1, depth - 2, -alpha - 1, -alpha);
-							if (score>alpha)
+							if (score > alpha)
 								score = -Search(NodeType.NonPv, ply + 1, depth - 1, -alpha - 1, -alpha);
 						}
-						if ((legalMoves==0)||((score > alpha)&&(score<beta)))
+						if ((legalMoves == 0) || ((score > alpha) && (score < beta)))
 							score = -Search(NodeType.Pv, ply + 1, depth - 1, -beta, -alpha);
 					}
 					legalMoves++;
@@ -596,7 +597,7 @@ namespace NSRapchess
 				if (score > alpha)
 				{
 					alpha = score;
-					if (ply == 0)
+					if (Program.dataIn.post && (ply == 0))
 					{
 						string bsFm = EmoToUmo(move);
 						string pv = GetBstMoves(move);
@@ -650,8 +651,20 @@ namespace NSRapchess
 			return result.Trim();
 		}
 
+		public void BestMove()
+		{
+			Console.Write("bestmove ");
+			if (!string.IsNullOrEmpty(Program.dataOut.moveBst))
+				Console.Write(Program.dataOut.moveBst);
+			if (!string.IsNullOrEmpty(Program.dataOut.movePonder) && Program.options.ponder)
+				Console.Write($" ponder {Program.dataOut.movePonder}");
+			Console.WriteLine();
+		}
+
 		public void Start(MList mo, int depth, int time, ulong nodes)
 		{
+			Program.dataOut.Restart();
+			stopwatch.Restart();
 			engineStop = false;
 			timeOut = time;
 			depthOut = depth;
@@ -661,22 +674,20 @@ namespace NSRapchess
 			curPv = 1;
 			CTranspositionTable.NextGeneration();
 			mo.CopyTo(moveList);
-			string bsFm = String.Empty;
-			string bsPm = String.Empty;
 			bstMoves.Clear();
 			do
 			{
-				Console.WriteLine($"info depth {depthCur}");
 				int score = Search(NodeType.Root, 0, depthCur, -Constants.CHECKMATE_MAX, Constants.CHECKMATE_MAX);
 				double ms = stopwatch.Elapsed.TotalMilliseconds;
 				double nps = ms > 0 ? (nodeCur * 1000.0) / ms : 0;
-				Console.WriteLine($"info time {Convert.ToInt64(ms)} nodes {nodeCur} nps {Convert.ToInt64(nps)}");
+				if (Program.dataIn.post)
+					Console.WriteLine($"info time {Convert.ToInt64(ms)} nodes {nodeCur} nps {Convert.ToInt64(nps)}");
 				if (curPv == 1)
 				{
 					if (bstMoves.Count > 0)
-						bsFm = EmoToUmo(bstMoves[0]);
+						Program.dataOut.moveBst = EmoToUmo(bstMoves[0]);
 					if (bstMoves.Count > 1)
-						bsPm = $" ponder {EmoToUmo(bstMoves[1])}";
+						Program.dataOut.movePonder = $" ponder {EmoToUmo(bstMoves[1])}";
 				}
 				if ((++curPv > optMultiPv) || (moveList.count < 2))
 				{
@@ -685,12 +696,19 @@ namespace NSRapchess
 				}
 				else if (bstMoves.Count > 0)
 					moveList.Remove(bstMoves[0]);
-				if ((++depthCur > depthOut) && (depthOut > 0))
-					break;
+				depthCur++;
+				if (!Program.dataIn.ponder)
+				{
+					if ((depthOut > 0) && (depthCur > depthOut))
+						break;
+					if ((timeOut > 0) && (ms > (timeOut / 2)))
+						break;
+				}
 				if ((score > Constants.CHECKMATE_NEAR) || (score < -Constants.CHECKMATE_NEAR))
 					break;
 			} while (!engineStop);
-			Console.WriteLine($"bestmove {bsFm}{bsPm}");
+			if (!Program.dataIn.ponder && Program.dataIn.post)
+				BestMove();
 			if (Program.bench.start)
 			{
 				Program.bench.nodes += nodeCur;
@@ -700,8 +718,9 @@ namespace NSRapchess
 
 		public void UciGo()
 		{
+			Program.dataIn.Reset();
 			synStop.SetStop(false);
-			stopwatch.Restart();
+			stopwatch.Reset();
 			MList mo = GenerateMovesLegal();
 			if (mo.count == 0)
 			{
@@ -713,17 +732,18 @@ namespace NSRapchess
 				Console.WriteLine($"bestmove {EmoToUmo(mo.table[0].move)}");
 				return;
 			}
-			int time = Program.uci.GetInt("movetime");
-			int depth = Program.uci.GetInt("depth");
-			ulong node = (ulong)Program.uci.GetInt("nodes");
-			int infinite = Program.uci.GetIndex("infinite",0);
-			if(time > 0) 
+			Program.dataIn.time = Program.uci.GetInt("movetime");
+			Program.dataIn.depth = Program.uci.GetInt("depth");
+			Program.dataIn.nodes = (ulong)Program.uci.GetInt("nodes");
+			Program.dataIn.infinite = Program.uci.GetIndex("infinite", 0)>0;
+			Program.dataIn.ponder = Program.uci.GetIndex("ponder") > 0;
+			if (Program.dataIn.time > 0)
 			{
-				time -= 100;
-				if (time < 1)
-					time = 1;
+				Program.dataIn.time -= 100;
+				if (Program.dataIn.time < 1)
+					Program.dataIn.time = 1;
 			}
-			else if ((time == 0) && (depth == 0) && (node == 0) && (infinite == 0))
+			else if ((Program.dataIn.time == 0) && (Program.dataIn.depth == 0) && (Program.dataIn.nodes == 0) && !Program.dataIn.infinite)
 			{
 				double ct = CPosition.IsWhiteTurn() ? Program.uci.GetInt("wtime") : Program.uci.GetInt("btime");
 				double inc = CPosition.IsWhiteTurn() ? Program.uci.GetInt("winc") : Program.uci.GetInt("binc");
@@ -731,11 +751,11 @@ namespace NSRapchess
 				double mod = mo.count / mg;
 				if (mod > 1)
 					mod = 1;
-				time = Convert.ToInt32(((ct - 1000.0) * mod + inc * mg * mod) / mg);
-				if (time < 1)
-					time = 1;
+				Program.dataIn.time = Convert.ToInt32(((ct - 1000.0) * mod + inc * mg * mod) / mg);
+				if (Program.dataIn.time < 1)
+					Program.dataIn.time = 1;
 			}
-			StartThread(mo, depth, time, node);
+			StartThread(mo, Program.dataIn.depth, Program.dataIn.time, Program.dataIn.nodes);
 		}
 
 		public void Thread()

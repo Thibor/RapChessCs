@@ -30,11 +30,11 @@ namespace NSRapchess
 		{
 			get
 			{
-				return CEngine.SquareToStr(passant);
+				return CSearch.SquareToStr(passant);
 			}
 			set
 			{
-				passant = CEngine.StrToSquare(value);
+				passant = CSearch.StrToSquare(value);
 			}
 		}
 
@@ -65,6 +65,15 @@ namespace NSRapchess
 		public static bool IsSpecialCapture(Move move)
 		{
 			return ((move & Constants.maskSpecial) > 0) || (board[(move >> 6) & 0x3f] != 0);
+		}
+
+		public static bool IsPassed(Move move)
+		{
+			int piece = (move >> 12) & 0xf;
+			if ((piece & 0x7) != Constants.piecePawn)
+				return false;
+			int to = (move >> 6) & 0x3f;
+			return (CPosition.bitBoard[(piece ^ Constants.maskColor) | Constants.piecePawn] & CEvaluate.bbPassed[to, piece >> 3]) == 0;
 		}
 
 		public static bool IsCheck()

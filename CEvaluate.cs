@@ -44,7 +44,7 @@ namespace NSRapchess
 		readonly static Bitboard[] bbIsolated = new ulong[64];
 		readonly static Bitboard[] bbDoubled = new ulong[64];
 		readonly static Bitboard[] bbConnected = new ulong[64];
-		readonly static Bitboard[,] bbPassed = new ulong[64, 2];
+		readonly public static Bitboard[,] bbPassed = new ulong[64, 2];
 		readonly static Bitboard[,] bbKingSafety = new ulong[64, 2];
 		readonly static Bitboard[] bbAttackBishop = new ulong[64];
 		readonly static Bitboard[] bbAttackRook = new ulong[64];
@@ -308,13 +308,6 @@ namespace NSRapchess
 			return (mg * phase + eg * (32 - phase)) / 32;
 		}
 
-		public static bool IsPassed(int piece, int fr)
-		{
-			return (CPosition.bitBoard[piece ^ Constants.maskColor] & bbPassed[fr, piece >> 3]) == 0;
-		}
-
-
-
 		static int SliderBishop(Color enCol, int fr, short[] arr)
 		{
 			int score = 0;
@@ -539,14 +532,15 @@ namespace NSRapchess
 
 		public static int Score()
 		{
+			int scoreUs = Score(CPosition.usRS);
+			int scoreEn = Score(CPosition.enRS);
 			if (CPosition.usRS.insufficient && CPosition.enRS.insufficient)
 				return 0;
-			return Score(CPosition.usRS) - Score(CPosition.enRS);
+			return scoreUs - scoreEn;
 		}
 
 		public static void SetLevel(int level)
 		{
-			int dl = 100 - level;
 			for (int r = 0; r < 16; r++)
 				for (int f = 0; f < 64; f++)
 				{
@@ -613,7 +607,8 @@ namespace NSRapchess
 			ShowResult("Kings", wMg, bMg, wEg, bEg);
 			scoreMg += wMg - bMg;
 			scoreEg += wEg - bEg;
-			Console.WriteLine($"Score ({scoreMg} {scoreEg})");
+			Console.WriteLine($"Total ({scoreMg} {scoreEg})");
+			Console.WriteLine($"Score ({Score()})");
 		}
 
 	}

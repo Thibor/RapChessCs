@@ -259,7 +259,7 @@ namespace NSRapchess
 			}
 			if (rank == Constants.pieceKing)
 			{
-				int cr = CEngine.castleRights >> (wt ? 0 : 2);
+				int cr = CSearch.castleRights >> (wt ? 0 : 2);
 				if ((move & Constants.moveflagCastleKing) > 0)
 				{
 					if (((cr & 1) > 0) && CPosition.IsSquareEmpty(fr + 1) && CPosition.IsSquareEmpty(fr + 2) && (!IsSquareAttacked(fr, CPosition.enCol)) && (!IsSquareAttacked(fr + 1, CPosition.enCol)) && (!IsSquareAttacked(fr + 2, CPosition.enCol)))
@@ -577,7 +577,7 @@ namespace NSRapchess
 					int to = CBitboard.Pop(ref bb);
 					AddMove(moves, fr, to, 0);
 				}
-				int cr = CEngine.castleRights >> (wt ? 0 : 2);
+				int cr = CSearch.castleRights >> (wt ? 0 : 2);
 				if ((cr & 1) > 0)
 					if ((((0b11ul << (wt ? 61 : 5)) | CPosition.emBitboard) == CPosition.emBitboard) && !IsSquareAttacked(fr, CPosition.enCol) && !IsSquareAttacked(fr + 1, CPosition.enCol) && !IsSquareAttacked(fr + 2, CPosition.enCol))
 						AddMove(moves, fr, fr + 2, Constants.moveflagCastleKing);

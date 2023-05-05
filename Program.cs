@@ -5,13 +5,18 @@ namespace NSRapchess
 {
 	class Program
 	{
-		public static CEngine engine = new CEngine();
+		public static CSearch engine = new CSearch();
 		public static CUci uci = new CUci();
 		public static CBench bench = new CBench();
+		public static COptions options = new COptions();
+		public static CDataIn dataIn = new CDataIn();
+		public static CDataOut dataOut = new CDataOut();
 
 		static void Main()
 		{
-			string version = "2022-12-08";
+			string version = "2023-04-30";
+			string name = $"RapChessCs ver. {version}";
+			Console.WriteLine(name);
 
 			while (true)
 			{
@@ -20,12 +25,13 @@ namespace NSRapchess
 				switch (uci.command)
 				{
 					case "uci":
-						Console.WriteLine($"id name Rapcschess {version}");
+						Console.WriteLine($"id name {name}");
 						Console.WriteLine("id author Thibor Raven");
 						Console.WriteLine("id link https://github.com/Thibor/RapChessCs");
 						Console.WriteLine("option name Mate pruning type check default true");
 						Console.WriteLine("option name Null pruning type check default true");
-						Console.WriteLine($"option name MultiPV type spin default {CEngine.optMultiPv} min 1 max 100");
+						Console.WriteLine("option name Ponder type check default true");
+						Console.WriteLine($"option name MultiPV type spin default {CSearch.optMultiPv} min 1 max 100");
 						Console.WriteLine($"option name UCI_Elo type spin default {Constants.elo} min 0 max {Constants.elo}");
 						Console.WriteLine("option name Skill level type spin default 100 min 0 max 100");
 						Console.WriteLine($"option name Hash type spin default {CTranspositionTable.DEFAULT_SIZE_MB} min 0 max 200");
@@ -38,15 +44,18 @@ namespace NSRapchess
 						switch (uci.GetValue("name", "value").ToLower())
 						{
 							case "mate pruning":
-								CEngine.optMatePruning = uci.GetValue("value") == "true";
-								Console.WriteLine("info string Mate pruning" + (CEngine.optMatePruning ? "on" : "off"));
+								CSearch.optMatePruning = uci.GetValue("value") == "true";
+								Console.WriteLine("info string Mate pruning" + (CSearch.optMatePruning ? "on" : "off"));
 								break;
 							case "null pruning":
-								CEngine.optNullPruning = uci.GetValue("value") == "true";
-								Console.WriteLine("info string Null pruning" + (CEngine.optNullPruning ? "on" : "off"));
+								CSearch.optNullPruning = uci.GetValue("value") == "true";
+								Console.WriteLine("info string Null pruning" + (CSearch.optNullPruning ? "on" : "off"));
+								break;
+							case "ponder":
+								options.ponder = uci.GetValue("value") == "true";
 								break;
 							case "multipv":
-								CEngine.optMultiPv = uci.GetInt("value", CEngine.optMultiPv);
+								CSearch.optMultiPv = uci.GetInt("value", CSearch.optMultiPv);
 								break;
 							case "skill level":
 								int level = uci.GetInt("value", 100);
@@ -78,10 +87,23 @@ namespace NSRapchess
 					case "quit":
 						engine.synStop.SetStop(true);
 						return;
+					case "ponderhit":
+						if (dataIn.ponder)
+						{
+							dataIn.ponder = false;
+							engine.timeOut = dataIn.time;
+							engine.depthOut = dataIn.depth;
+							engine.nodeOut = dataIn.nodes;
+							engine.stopwatch.Restart();
+						}
+						else
+							engine.BestMove();
+						break;
 					case "eval":
-						Console.WriteLine($"evaluation {CEvaluate.Score()}");
+						CEvaluate.Trace();
 						break;
 					case "bench":
+						dataIn.Reset();
 						bench.Start();
 						break;
 

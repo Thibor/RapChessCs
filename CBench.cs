@@ -147,6 +147,34 @@ namespace NSRapchess
 				Read();
 		}
 
+		void Bench()
+		{
+			Program.dataIn.post = false;
+			Console.WriteLine("Benchmark test");
+			CSearch engine = Program.engine;
+			MList mo = new MList();
+			ulong totalMs = 0;
+			ulong totalNodes = 0;
+			for (int n = 1; n < 11; n++)
+			{
+				engine.Start(mo, n, 0, 0);
+				ulong ms = (ulong)engine.stopwatch.ElapsedMilliseconds;
+				ulong nodes = engine.nodeCur;
+				totalMs += ms;
+				totalNodes += nodes;
+				string sMs = $"{ms:N0}";
+				string sNodes = $"{nodes:N0}";
+				Console.WriteLine($"{n}.     {new string(' ', 20 - (n < 10 ? 1 : 2) - sMs.Length)} {sMs} {new string(' ', 20 - sNodes.Length)} {sNodes}");
+			}
+			ulong nps = totalMs > 0 ? (totalNodes * 1000) / totalMs : 0;
+			Console.WriteLine();
+			Console.WriteLine(new string('=', 32));
+			Console.WriteLine($"Time           {totalMs:N0}");
+			Console.WriteLine($"Nodes          {totalNodes:N0}");
+			Console.WriteLine($"Nps            {nps:N0}");
+			Console.WriteLine(new string('=', 32));
+		}
+
 		public void Start()
 		{
 			string fn = "bench.txt";
@@ -157,7 +185,7 @@ namespace NSRapchess
 				BenchStart();
 			}
 			else
-				CEvaluate.Trace();
+				Bench();
 		}
 
 	}
