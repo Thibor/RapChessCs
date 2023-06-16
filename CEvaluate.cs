@@ -171,13 +171,13 @@ namespace NSRapchess
 		public static short[] MobilityValuesPawn = new short[]
 		{   0,    0,   28,   36,   17,   31,   89,    0,    0,   10,    9,   11,    3,   -1,   -5 };  //P
 		public static short[] MobilityValuesKnight = new short[]
-		{   1,   -4,    0,   20,   19,   18,   34,    0,    0,    1,    3,    0,    2,    4,    3 };  // N
+		{   1,   -4,    0,   20,   19,   18,   34,    0,    1,    1,    3,    0,    2,    4,    3 };  // N
 		public static short[] MobilityValuesBishop = new short[]
-		{    2,   -1,   22,    0,   15,   30,   67,   0,    0,   -8,    3,   54,    4,   -1,   -3 };  // B
+		{    2,   -1,   22,    0,   15,   30,   67,   0,    2,   -8,    3,   54,    4,   -1,   -3 };  // B
 		public static short[] MobilityValuesRook = new short[]
-		{    2,   -1,    6,   15,    0,   31,   36,   0,    0,  -11,    3,   -2,    4,    2,   -1 };  // R
+		{    2,   -1,    6,   15,    0,   31,   36,   0,    2,  -11,    3,   -2,    4,    2,   -1 };  // R
 		public static short[] MobilityValuesQueen = new short[]
-		{    3,   -3,   -3,    4,    1,    0,   75,   0,    0,   -3,    5,    6,    1,  -99,   -4 };  // Q
+		{    3,   -3,   -3,    4,    1,    0,   75,   0,    3,   -3,    5,    6,    1,  -99,   -4 };  // Q
 		public static short[] MobilityValuesKing = new short[]
 		{   0,   30,    3,   12,    5,  -99,    0,    0,    0,    6,    4,    7,   -8,    6,    0 };  // K
 

@@ -524,16 +524,19 @@ namespace NSRapchess
 				if (alpha >= beta) return alpha;
 			}
 
-			// Null pruning
-			if (optNullPruning && (ply > 1) && !usChecked && (depth > 2) && CPosition.NotOnlyPawns())
+			if (!usChecked && alpha == beta - 1)
 			{
-				hash ^= hashColor;
-				CPosition.ChangeColor();
-				int score = -Search(NodeType.NonPv, ply + 1, 1, -beta, -beta + 1);
-				hash ^= hashColor;
-				CPosition.ChangeColor();
-				if (score >= beta)
-					return beta;
+				// Null pruning 
+				if (optNullPruning && (ply > 1) && !usChecked && (depth > 2) && CPosition.NotOnlyPawns())
+				{
+					hash ^= hashColor;
+					CPosition.ChangeColor();
+					int score = -Search(NodeType.NonPv, ply + 1, depth - 4 - depth / 6, -beta, 1 - beta);
+					hash ^= hashColor;
+					CPosition.ChangeColor();
+					if (score >= beta)
+						return beta;
+				}
 			}
 
 			if (ply > 0)

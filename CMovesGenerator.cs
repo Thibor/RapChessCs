@@ -132,6 +132,7 @@ namespace NSRapchess
 					bbAttack[Constants.pieceBishop | Constants.colWhite, iw] = bbAttack[Constants.pieceBishop, iw];
 					bbAttack[Constants.pieceRook | Constants.colWhite, iw] = bbAttack[Constants.pieceRook, iw];
 					bbAttack[Constants.pieceQueen | Constants.colWhite, iw] = bbAttack[Constants.pieceQueen, iw];
+					bbAttack[Constants.pieceKing | Constants.colWhite, iw] = bbAttack[Constants.pieceKing, iw];
 					FillVector(Constants.piecePawn | Constants.colWhite, x, y, 1);
 					FillVector(Constants.piecePawn | Constants.colBlack, x, y, 1);
 					FillVector(Constants.pieceKnight | Constants.colWhite, x, y, 1);
