@@ -1,9 +1,5 @@
 # RapChessCs
 
-<p align="center">
-<img src="https://github.com/Thibor/RapChessCs/blob/master/Resources/RapChessCs.png" />
-</p>
-
 <div align="center" style="padding-top: 50px">
 <img src="https://github.com/Thibor/RapChessCs/blob/master/Resources/RapChessCs.png" />
     <br>
