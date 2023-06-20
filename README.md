@@ -1,7 +1,7 @@
 # RapChessCs
 
 <div align="center" style="padding-top: 50px">
-<img src="/Resources/RapChessCs.png" />
+<img src="/Resources/logo.png" />
     <br>
     <br>
     <b><i>C# uci chess engine.</i></b>
