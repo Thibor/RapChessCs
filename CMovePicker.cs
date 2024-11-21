@@ -17,90 +17,46 @@ namespace NSRapchess
 
 	internal class CMovePicker
 	{
-		int index;
-		int phase = 0;
-		readonly MList pickerList = new MList();
-		readonly MList recList = new MList();
-		MList startMoves = new MList();
-		readonly MList usedMoves = new MList();
+		int index =0;
+		readonly MList moves = new MList();
 
 		public CMovePicker()
 		{
-			startMoves = CMovesGenerator.GenerateMovesAttack();
-			for (int n = 0; n < startMoves.count; n++)
-			{
-				int m = startMoves.table[n].move;
-				int s = GetScore(m);
-				pickerList.Add(new MoveStack(m, s));
-			}
-			phase = 2;
+			moves = CMovesGenerator.GenerateMovesAttack();
 		}
 
-		public CMovePicker(Hash hash, MList moves, Move killer1, Move killer2)
+		public CMovePicker(MList ml,Hash hash,  Move killer1, Move killer2)
 		{
 			CTranspositionTable.GetRec(hash, out CRec rec);
-			if (rec.move > 0)
-				recList.Add(rec.move);
-			recList.Add(killer1);
-			recList.Add(killer2);
-			startMoves = moves;
-		}
-
-		public CMovePicker(Hash hash, Move killer1, Move killer2)
-		{
-			CTranspositionTable.GetRec(hash, out CRec rec);
-			if (rec.move > 0)
-				recList.Add(rec.move);
-			recList.Add(killer1);
-			recList.Add(killer2);
+			ml.Best(rec.move);
+			ml.Best(killer1);
+			ml.Best(killer2);
+			ml.CopyTo(moves);
 		}
 
 		public bool NextMove(out Move move)
 		{
-			if (phase == 0)
-			{
-				while (index < recList.count)
-				{
-					move = recList.table[index++].move;
-					if ((usedMoves.Find(move) == -1) && CMovesGenerator.IsHashMoveValid(move))
-					{
-						usedMoves.Add(move);
-						return true;
-					}
-				}
-				if (startMoves.count == 0)
-					startMoves = CMovesGenerator.GenerateMovesAll();
-				for (int n = 0; n < usedMoves.count; n++)
-					startMoves.Remove(usedMoves.table[n].move);
-				index = 0;
-				phase = 1;
-			}
-			if (phase == 1)
-			{
-				for (int n = 0; n < startMoves.count; n++)
-				{
-					int m = startMoves.table[n].move;
-					int s = GetScore(m);
-					pickerList.Add(new MoveStack(m, s));
-				}
-				index = 0;
-				phase = 2;
-			}
-			if (index >= pickerList.count)
-			{
-				move = 0;
+			move = 0;
+			if (index >= moves.count)
 				return false;
+			if(index<moves.bst)
+			{
+				move = moves.table[index++].move;
+				return true;
 			}
+			if(index==moves.bst)
+                for (int n = index; n < moves.count; n++)
+                    moves.table[n].score = GetScore(moves.table[n].move);
 			int bstI = index;
 			int bstS = int.MinValue;
-			for (int n = index; n < pickerList.count; n++)
-				if (pickerList.table[n].score > bstS)
+			for (int n = index; n < moves.count; n++)
+				if (moves.table[n].score > bstS)
 				{
 					bstI = n;
-					bstS = pickerList.table[n].score;
+					bstS = moves.table[n].score;
 				}
-			move = pickerList.table[bstI].move;
-			(pickerList.table[bstI], pickerList.table[index]) = (pickerList.table[index], pickerList.table[bstI]);
+			move = moves.table[bstI].move;
+			(moves.table[bstI], moves.table[index]) = (moves.table[index],moves.table[bstI]);
 			index++;
 			return true;
 		}

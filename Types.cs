@@ -80,8 +80,9 @@ namespace NSRapchess
 	{
 		internal readonly MoveStack[] table = new MoveStack[Constants.MAX_MOVES];
 		internal int count = 0;
+		public int bst = 0;
 
-		public void Add(int move)
+		public void Add(Move move)
 		{
 			table[count++].move = move;
 		}
@@ -99,29 +100,49 @@ namespace NSRapchess
 			return -1;
 		}
 
-		public void Remove(Move m)
+		public bool Remove(Move m)
 		{
 			for (int n = 0; n < count; n++)
 				if (table[n].move == m)
 				{
-					count--;
-					(table[n], table[count]) = (table[count], table[n]);
-					return;
+					table[n]=table[--count];
+					return true;
 				}
+			return false;
 		}
 
 		public void RemoveAt(int i)
 		{
-			count--;
-			(table[i], table[count]) = (table[count], table[i]);
+			table[i] = table[--count];
 		}
 
 		public void CopyTo(MList to)
 		{
-			Array.Copy(this.table, to.table, count);
+			Array.Copy(table, to.table, count);
 			to.count = count;
+			to.bst = bst;
 		}
 
-	}
+        public MList Copy()
+        {
+			MList copy = new MList();
+            Array.Copy(table, copy.table, count);
+            copy.count = count;
+			copy.bst = bst;
+			return copy;
+        }
+
+		public void Best(Move m)
+		{
+            for (int n = bst; n < count; n++)
+                if (table[n].move == m)
+                {
+					(table[n], table[bst]) = (table[bst],table[n]);
+					bst++;
+                    return;
+                }
+        }
+
+    }
 
 }

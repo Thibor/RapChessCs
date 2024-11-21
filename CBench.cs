@@ -100,7 +100,7 @@ namespace NSRapchess
 						continue;
 					case "finish":
 						if (fenList.Count == 0)
-							CEvaluate.Trace();
+							CEvaluate.PrintEval();
 						BenchFinish();
 						return;
 					case "fen":
@@ -130,7 +130,7 @@ namespace NSRapchess
 				string fen = Program.engine.GetFen();
 				fenList.Add(fen);
 				if (modeScore)
-					CEvaluate.Trace();
+					CEvaluate.PrintEval();
 				else
 				{
 					CTranspositionTable.Clear();
